@@ -11,6 +11,7 @@ function LoginForm() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">(
     params.get("error") ? "error" : "idle",
   );
+  const [errorDetail, setErrorDetail] = useState(params.get("error") ?? "");
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -20,6 +21,7 @@ function LoginForm() {
       email,
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     });
+    setErrorDetail(error ? error.message : "");
     setStatus(error ? "error" : "sent");
   }
 
@@ -52,7 +54,13 @@ function LoginForm() {
             {status === "sending" ? "Enviando…" : "Enviarme el enlace"}
           </button>
           {status === "error" && (
-            <p className="text-sm text-red-600">No se pudo entrar. Prueba otra vez.</p>
+            <div className="text-sm text-red-600">
+              <p>No se pudo entrar. Prueba otra vez.</p>
+              {errorDetail && <p className="mt-1 text-xs opacity-80">Detalle: {errorDetail}</p>}
+              <p className="mt-1 text-xs opacity-80">
+                Recuerda abrir el enlace del email en este mismo navegador.
+              </p>
+            </div>
           )}
         </form>
       )}
