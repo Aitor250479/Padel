@@ -9,7 +9,7 @@ para el torneo.
 
 ## Estado
 
-- [x] Paso 1: login por email, perfiles, parejas y rol de organizador
+- [x] Paso 1: login con email y contraseña, perfiles, parejas y rol de organizador
 - [x] Paso 2: disponibilidad semanal
 - [x] Paso 3: emparejamientos
 - [x] Paso 4: resultados y clasificación
@@ -50,17 +50,20 @@ para el torneo.
 En Supabase, **Authentication → URL Configuration**:
 
 - **Site URL**: la dirección de Vercel.
-- **Redirect URLs**: añade `https://TU-DIRECCION.vercel.app/auth/callback`.
+- **Redirect URLs**: añade `https://TU-DIRECCION.vercel.app/**`.
+
+En **Authentication → Sign In / Providers → Email**, desactiva **Confirm email** si quieres que
+las cuentas nuevas no tengan que confirmar el email (se entra directamente con email y
+contraseña). Si lo dejas activado, la primera vez llega un email de confirmación.
 
 ### 4. Primer acceso
 
-Entra en la web con tu email. **La primera persona que entra queda como organizadora.**
-Después pasa la dirección al resto de jugadores. Cuando hayan entrado, desde **Parejas** creas
-las parejas y asignas a cada jugador. Desde ahí también puedes hacer organizador a otra persona.
+Cada jugador entra en la web, pulsa **Es mi primera vez: crear cuenta** y pone su email y una
+contraseña. Después entra siempre con email y contraseña. **La primera persona que se registra
+queda como organizadora.** Quien olvide la contraseña puede pedir un enlace para crear una nueva.
 
-> El servidor de correo gratuito de Supabase envía pocos emails por hora. Si en el primer día
-> entra mucha gente a la vez y algún enlace no llega, que lo pida de nuevo un rato después. Si
-> se queda corto, se puede configurar un servidor SMTP propio en Supabase.
+Cuando los jugadores tengan cuenta, desde **Parejas** creas las parejas y asignas a cada jugador.
+Desde ahí también puedes hacer organizador a otra persona.
 
 ## Desarrollo local
 
