@@ -55,3 +55,17 @@ export async function toggleOrganizer(formData: FormData) {
     .eq("id", playerId);
   done(error);
 }
+
+export async function setPlayerPassword(formData: FormData) {
+  const { supabase } = await requireOrganizer();
+  const playerId = String(formData.get("player_id"));
+  const password = String(formData.get("password") ?? "");
+  if (password.length < 6) return done({ message: "La contraseña debe tener al menos 6 caracteres" });
+  const { error } = await supabase.rpc("admin_set_password", {
+    target: playerId,
+    new_password: password,
+  });
+  if (error) return done(error);
+  revalidatePath("/", "layout");
+  redirect(`/admin/parejas?ok=${encodeURIComponent("Contraseña cambiada. Pásasela al jugador para que entre.")}`);
+}

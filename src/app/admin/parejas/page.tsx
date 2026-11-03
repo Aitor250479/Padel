@@ -1,6 +1,13 @@
 import Header from "@/components/Header";
 import { displayName, requireOrganizer, type Pair, type Profile } from "@/lib/session";
-import { assignPlayer, createPair, deletePair, renamePair, toggleOrganizer } from "./actions";
+import {
+  assignPlayer,
+  createPair,
+  deletePair,
+  renamePair,
+  setPlayerPassword,
+  toggleOrganizer,
+} from "./actions";
 
 const input = "rounded-lg border border-gray-300 px-2 py-1 text-black";
 const button = "rounded-lg bg-emerald-600 px-3 py-1 text-sm font-semibold text-white";
@@ -8,10 +15,10 @@ const button = "rounded-lg bg-emerald-600 px-3 py-1 text-sm font-semibold text-w
 export default async function ParejasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; ok?: string }>;
 }) {
   const { supabase, profile } = await requireOrganizer();
-  const { error } = await searchParams;
+  const { error, ok } = await searchParams;
 
   const [{ data: pairs }, { data: players }] = await Promise.all([
     supabase.from("pairs").select("id, name").order("name").returns<Pair[]>(),
@@ -31,6 +38,7 @@ export default async function ParejasPage({
         <h1 className="mb-4 text-2xl font-bold">Parejas y jugadores</h1>
 
         {error && <p className="mb-4 rounded-lg bg-red-100 p-3 text-red-900">{error}</p>}
+        {ok && <p className="mb-4 rounded-lg bg-emerald-100 p-3 text-emerald-900">{ok}</p>}
 
         <form action={createPair} className="mb-6 flex gap-2">
           <input name="name" placeholder="Nombre de la nueva pareja" className={`${input} flex-1`} />
@@ -96,6 +104,25 @@ export default async function ParejasPage({
                 </select>
                 <button className={button}>Asignar</button>
               </form>
+              <details className="w-full text-sm">
+                <summary className="cursor-pointer underline">Cambiar contraseña</summary>
+                <form action={setPlayerPassword} className="mt-2 flex flex-wrap gap-2">
+                  <input type="hidden" name="player_id" value={p.id} />
+                  <input
+                    name="password"
+                    type="text"
+                    required
+                    minLength={6}
+                    autoComplete="off"
+                    placeholder="Nueva contraseña (mín. 6)"
+                    className={`${input} flex-1`}
+                  />
+                  <button className={button}>Guardar</button>
+                </form>
+                <p className="mt-1 text-xs opacity-60">
+                  Luego pásasela al jugador. Podrá cambiarla en Mi perfil.
+                </p>
+              </details>
               {p.id !== profile.id && (
                 <form action={toggleOrganizer}>
                   <input type="hidden" name="player_id" value={p.id} />
