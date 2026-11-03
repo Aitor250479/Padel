@@ -11,7 +11,7 @@ para el torneo.
 
 - [x] Paso 1: login por email, perfiles, parejas y rol de organizador
 - [x] Paso 2: disponibilidad semanal
-- [ ] Paso 3: emparejamientos
+- [x] Paso 3: emparejamientos
 - [ ] Paso 4: resultados y clasificación
 
 ## Puesta en marcha (una sola vez)
@@ -58,6 +58,8 @@ cp .env.example .env.local   # y rellena las dos claves
 npm install
 npm run dev
 ```
+
+`npm test` comprueba el algoritmo de emparejamiento.
 
 Añade `http://localhost:3000/auth/callback` a las Redirect URLs de Supabase para poder entrar en
 local.

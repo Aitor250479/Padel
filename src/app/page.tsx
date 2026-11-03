@@ -27,7 +27,11 @@ export default async function Home() {
       text: "Marca qué días y horas puedes jugar.",
       href: "/disponibilidad",
     },
-    { title: "Mis partidos", text: "Rival, lugar y hora de la pista reservada." },
+    {
+      title: "Partidos",
+      text: "Rival, lugar y hora de la pista reservada.",
+      href: "/partidos",
+    },
     { title: "Clasificación", text: "Ganados, empatados, perdidos y puntos." },
   ];
 
