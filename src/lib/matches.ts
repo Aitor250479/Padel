@@ -60,3 +60,47 @@ export function formatResult(m: Match, pairName: (id: string) => string) {
   const tie = m.sets_a === m.sets_b ? " · sin terminar, empate" : "";
   return base + (m.score_detail ? ` (${m.score_detail})` : "") + tie;
 }
+
+export type ProposedResult = {
+  match_id: string;
+  pair_id: string;
+  sets_a: number;
+  sets_b: number;
+  score_detail: string | null;
+};
+
+export const PROPOSED_COLUMNS = "match_id, pair_id, sets_a, sets_b, score_detail";
+
+/**
+ * ¿Se puede introducir ya el resultado? Cuando ha pasado la fecha y hora de la
+ * reserva. Si no se apuntó reserva, cuando ha terminado la semana del partido.
+ */
+export function resultOpen(m: Match, now: string) {
+  if (m.booking_at) return now >= m.booking_at.slice(0, 16);
+  const end = new Date(`${m.week_start}T00:00:00Z`);
+  end.setUTCDate(end.getUTCDate() + 7);
+  return now >= end.toISOString().slice(0, 10);
+}
+
+/** Texto del estado del resultado para la lista y la ficha. */
+export function resultStatus(
+  m: Match,
+  proposals: ProposedResult[],
+  pairName: (id: string) => string,
+): { tone: "ok" | "pending" | "warn"; text: string } {
+  const confirmed = formatResult(m, pairName);
+  if (confirmed) return { tone: "ok", text: confirmed };
+  const mine = proposals.filter((p) => p.match_id === m.id);
+  if (mine.length === 0) return { tone: "pending", text: "Falta introducir el resultado" };
+  if (mine.length === 1) {
+    const other = mine[0].pair_id === m.pair_a ? m.pair_b : m.pair_a;
+    return {
+      tone: "pending",
+      text: `${pairName(mine[0].pair_id)} ha introducido el resultado. Falta la confirmación de ${pairName(other)}`,
+    };
+  }
+  return {
+    tone: "warn",
+    text: "Las dos parejas han puesto resultados distintos. Hay que ponerse de acuerdo y corregirlo",
+  };
+}

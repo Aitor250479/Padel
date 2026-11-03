@@ -14,6 +14,17 @@ para el torneo.
 - [x] Paso 3: emparejamientos
 - [x] Paso 4: resultados y clasificación
 
+## Cómo funciona
+
+- **Disponibilidad**: cada semana, cada jugador indica si puede jugar o no. Una pareja está
+  disponible cuando pueden los dos.
+- **Emparejamientos**: el organizador pulsa un botón y se emparejan al azar las parejas
+  disponibles, con prioridad para el rival que menos partidos lleva. Si son impares, descansa la
+  que más partidos lleva. El organizador puede cambiar los partidos a mano.
+- **Partido**: los jugadores apuntan lugar, fecha y hora, y lo ven todos.
+- **Resultado**: pasada la fecha del partido, cada pareja introduce el resultado. Cuenta para la
+  clasificación cuando las dos parejas coinciden. El organizador puede fijarlo directamente.
+
 ## Puesta en marcha (una sola vez)
 
 ### 1. Supabase

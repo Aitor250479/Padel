@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { availablePairIds } from "@/lib/availability";
+import { MATCH_COLUMNS, resultOpen, type Match } from "@/lib/matches";
 import { makePairings, type Candidate } from "@/lib/pairing";
 import { requireOrganizer, requireProfile } from "@/lib/session";
 import { RESULT_OPTIONS } from "@/lib/standings";
-import { slotKey, weekDays } from "@/lib/weeks";
+import { nowInSpain } from "@/lib/weeks";
 
 function back(path: string, params: Record<string, string>) {
   revalidatePath("/", "layout");
@@ -15,16 +17,9 @@ function back(path: string, params: Record<string, string>) {
 export async function generatePairings(formData: FormData) {
   const { supabase } = await requireOrganizer();
   const weekStart = String(formData.get("week_start"));
-  const days = weekDays(weekStart);
 
-  const [{ data: pairs }, { data: slots }, { data: matches }] = await Promise.all([
-    supabase.from("pairs").select("id").returns<{ id: string }[]>(),
-    supabase
-      .from("availability")
-      .select("pair_id, day, hour")
-      .gte("day", days[0])
-      .lte("day", days[6])
-      .returns<{ pair_id: string; day: string; hour: number }[]>(),
+  const [available, { data: matches }] = await Promise.all([
+    availablePairIds(supabase, weekStart),
     supabase
       .from("matches")
       .select("week_start, pair_a, pair_b")
@@ -41,36 +36,25 @@ export async function generatePairings(formData: FormData) {
     }
   }
 
-  const slotsByPair = new Map<string, string[]>();
-  for (const s of slots ?? []) {
-    if (!slotsByPair.has(s.pair_id)) slotsByPair.set(s.pair_id, []);
-    slotsByPair.get(s.pair_id)!.push(slotKey(s.day, s.hour));
+  let candidates: Candidate[] = available
+    .filter((id) => !busy.has(id))
+    .map((id) => ({ id, played: played.get(id) ?? 0, slots: ["semana"] }));
+
+  // Con un número impar descansa la pareja que más partidos lleva (si empatan, al azar).
+  let resting: string | null = null;
+  if (candidates.length % 2 === 1) {
+    const max = Math.max(...candidates.map((c) => c.played));
+    const top = candidates.filter((c) => c.played === max);
+    resting = top[Math.floor(Math.random() * top.length)].id;
+    candidates = candidates.filter((c) => c.id !== resting);
   }
 
-  const candidates: Candidate[] = (pairs ?? [])
-    .filter((p) => !busy.has(p.id) && slotsByPair.has(p.id))
-    .map((p) => ({ id: p.id, played: played.get(p.id) ?? 0, slots: slotsByPair.get(p.id)! }));
-
-  let result;
-  try {
-    result = makePairings(candidates);
-  } catch (e) {
-    return back("/partidos", { semana: weekStart, error: (e as Error).message });
-  }
+  const result = makePairings(candidates);
 
   if (result.matches.length) {
-    const { error } = await supabase.from("matches").insert(
-      result.matches.map((m) => {
-        const [day, hour] = m.slot.split("|");
-        return {
-          week_start: weekStart,
-          pair_a: m.a,
-          pair_b: m.b,
-          slot_day: day,
-          slot_hour: Number(hour),
-        };
-      }),
-    );
+    const { error } = await supabase
+      .from("matches")
+      .insert(result.matches.map((m) => ({ week_start: weekStart, pair_a: m.a, pair_b: m.b })));
     if (error) return back("/partidos", { semana: weekStart, error: error.message });
   }
 
@@ -78,11 +62,9 @@ export async function generatePairings(formData: FormData) {
     semana: weekStart,
     ok:
       result.matches.length === 0
-        ? "No hay parejas libres que coincidan en ninguna franja."
+        ? "No hay parejas libres con los dos jugadores disponibles."
         : `Creados ${result.matches.length} partidos.` +
-          (result.unmatched.length
-            ? ` ${result.unmatched.length} pareja(s) con disponibilidad se quedan sin rival.`
-            : ""),
+          (resting ? " Como sois impares, una pareja descansa esta semana." : ""),
   });
 }
 
@@ -101,20 +83,12 @@ export async function createMatch(formData: FormData) {
 export async function updateMatch(formData: FormData) {
   const { supabase } = await requireOrganizer();
   const id = String(formData.get("id"));
-  const slot = String(formData.get("slot") ?? "");
-  const [day, hour] = slot ? slot.split("|") : [null, null];
   const a = String(formData.get("pair_a"));
   const b = String(formData.get("pair_b"));
   if (a === b) return back(`/partidos/${id}`, { error: "Elige dos parejas distintas" });
   const { error } = await supabase
     .from("matches")
-    .update({
-      pair_a: a,
-      pair_b: b,
-      slot_day: day,
-      slot_hour: hour === null ? null : Number(hour),
-      status: String(formData.get("status")),
-    })
+    .update({ pair_a: a, pair_b: b, status: String(formData.get("status")) })
     .eq("id", id);
   back(`/partidos/${id}`, error ? { error: error.message } : { ok: "Partido actualizado." });
 }
@@ -141,32 +115,57 @@ export async function saveBooking(formData: FormData) {
   if (!error && !data?.length) {
     return back(`/partidos/${id}`, { error: "Solo los jugadores del partido pueden cambiar la reserva" });
   }
-  back(`/partidos/${id}`, error ? { error: error.message } : { ok: "Reserva guardada." });
+  back(`/partidos/${id}`, error ? { error: error.message } : { ok: "Lugar, fecha y hora guardados." });
 }
 
+/**
+ * Cada pareja introduce su resultado. Cuenta cuando las dos coinciden.
+ * Un organizador puede fijar el resultado de las dos parejas a la vez.
+ */
 export async function saveResult(formData: FormData) {
-  const { supabase } = await requireProfile();
+  const { supabase, profile } = await requireProfile();
   const id = String(formData.get("id"));
-  const result = String(formData.get("result") ?? "");
-  const option = RESULT_OPTIONS.find((o) => o.value === result);
-  const detail = String(formData.get("score_detail") ?? "").trim().slice(0, 60);
+  const asOrganizer = formData.get("as_organizer") === "1" && profile.is_organizer;
   const clear = formData.get("clear") === "1";
-  if (!clear && !option) return back(`/partidos/${id}`, { error: "Elige un resultado" });
+  const option = RESULT_OPTIONS.find((o) => o.value === String(formData.get("result") ?? ""));
+  const detail = String(formData.get("score_detail") ?? "").trim().slice(0, 60);
 
-  const { data, error } = await supabase
+  const { data: match } = await supabase
     .from("matches")
-    .update(
-      clear
-        ? { sets_a: null, sets_b: null, score_detail: null }
-        : { sets_a: option!.a, sets_b: option!.b, score_detail: detail || null },
-    )
+    .select(MATCH_COLUMNS)
     .eq("id", id)
-    .select("id");
-  if (!error && !data?.length) {
+    .maybeSingle<Match>();
+  if (!match) return back("/partidos", { error: "Partido no encontrado" });
+
+  const myPair = profile.pair_id;
+  const isPlayer = !!myPair && [match.pair_a, match.pair_b].includes(myPair);
+  if (!asOrganizer && !isPlayer) {
     return back(`/partidos/${id}`, { error: "Solo los jugadores del partido pueden poner el resultado" });
   }
-  back(
-    `/partidos/${id}`,
-    error ? { error: error.message } : { ok: clear ? "Resultado borrado." : "Resultado guardado." },
+  if (!asOrganizer && !resultOpen(match, nowInSpain())) {
+    return back(`/partidos/${id}`, { error: "El resultado se puede poner cuando haya pasado la fecha del partido" });
+  }
+
+  const pairs = asOrganizer ? [match.pair_a, match.pair_b] : [myPair!];
+
+  if (clear) {
+    const { error } = await supabase
+      .from("match_results")
+      .delete()
+      .eq("match_id", id)
+      .in("pair_id", pairs);
+    return back(`/partidos/${id}`, error ? { error: error.message } : { ok: "Resultado borrado." });
+  }
+
+  if (!option) return back(`/partidos/${id}`, { error: "Elige un resultado" });
+  const { error } = await supabase.from("match_results").upsert(
+    pairs.map((pairId) => ({
+      match_id: id,
+      pair_id: pairId,
+      sets_a: option.a,
+      sets_b: option.b,
+      score_detail: detail || null,
+    })),
   );
+  back(`/partidos/${id}`, error ? { error: error.message } : { ok: "Resultado guardado." });
 }

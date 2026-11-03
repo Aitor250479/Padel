@@ -24,12 +24,12 @@ export default async function Home() {
   const sections: { title: string; text: string; href?: string }[] = [
     {
       title: "Disponibilidad semanal",
-      text: "Marca qué días y horas puedes jugar.",
+      text: "Indica si puedes jugar esta semana.",
       href: "/disponibilidad",
     },
     {
       title: "Partidos",
-      text: "Rival, lugar y hora de la pista reservada.",
+      text: "Rival, lugar, fecha y hora, y resultado.",
       href: "/partidos",
     },
     {
