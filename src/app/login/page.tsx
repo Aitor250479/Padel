@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -27,7 +28,15 @@ function LoginForm() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
-      <h1 className="mb-2 text-3xl font-bold">🎾 Torneo Pádel Loyola y CIA</h1>
+      <Image
+        src="/logo.png"
+        alt="Logo del Torneo Pádel Loyola y CIA"
+        width={192}
+        height={192}
+        className="mx-auto mb-4 h-48 w-48 object-contain"
+        priority
+      />
+      <h1 className="mb-2 text-center text-3xl font-bold">Torneo Pádel Loyola y CIA</h1>
       <p className="mb-6 text-sm opacity-70">
         Escribe tu email y te enviaremos un enlace para entrar. No hace falta contraseña.
       </p>
