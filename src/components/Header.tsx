@@ -9,6 +9,7 @@ export default function Header({ profile }: { profile: Profile }) {
           🎾 Torneo
         </Link>
         <Link href="/disponibilidad">Disponibilidad</Link>
+        <Link href="/partidos">Partidos</Link>
         <Link href="/perfil">Mi perfil</Link>
         {profile.is_organizer && <Link href="/admin/parejas">Parejas</Link>}
         <span className="ml-auto opacity-70">{displayName(profile)}</span>
