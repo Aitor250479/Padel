@@ -10,7 +10,7 @@ para el torneo.
 ## Estado
 
 - [x] Paso 1: login por email, perfiles, parejas y rol de organizador
-- [ ] Paso 2: disponibilidad semanal
+- [x] Paso 2: disponibilidad semanal
 - [ ] Paso 3: emparejamientos
 - [ ] Paso 4: resultados y clasificación
 
@@ -20,8 +20,9 @@ para el torneo.
 
 1. Crea un proyecto nuevo en [supabase.com](https://supabase.com/dashboard). Región: la más
    cercana (por ejemplo, Frankfurt o Londres).
-2. Ve a **SQL Editor**, pega el contenido de
-   [`supabase/migrations/001_base.sql`](supabase/migrations/001_base.sql) y pulsa **Run**.
+2. Ve a **SQL Editor** y ejecuta, en orden, cada archivo de
+   [`supabase/migrations`](supabase/migrations): pega su contenido y pulsa **Run**.
+   Cuando se añada un archivo nuevo en una actualización, ejecuta solo ese.
 3. Ve a **Project Settings → API** y copia la **Project URL** y la clave **anon public**.
 
 ### 2. Vercel
