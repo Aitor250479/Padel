@@ -99,13 +99,13 @@ function LoginForm() {
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4 py-8">
       <Image
         src="/logo.png"
-        alt="Logo del Torneo Pádel Loyola y CIA"
+        alt="Logo del Torneo Pádel Loyola"
         width={192}
         height={192}
         className="mx-auto mb-4 h-48 w-48 object-contain"
         priority
       />
-      <h1 className="mb-6 text-center text-3xl font-bold">Torneo Pádel Loyola y CIA</h1>
+      <h1 className="mb-6 text-center text-3xl font-bold">Torneo Pádel Loyola</h1>
 
       <h2 className="mb-1 text-lg font-semibold">{title}</h2>
       {mode === "registro" && (
