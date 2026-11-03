@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Header from "@/components/Header";
 import { displayName, requireProfile, type Pair, type Profile } from "@/lib/session";
 
@@ -20,8 +21,12 @@ export default async function Home() {
     partner = mates?.[0] ?? null;
   }
 
-  const sections = [
-    { title: "Disponibilidad semanal", text: "Marca qué días y horas puedes jugar." },
+  const sections: { title: string; text: string; href?: string }[] = [
+    {
+      title: "Disponibilidad semanal",
+      text: "Marca qué días y horas puedes jugar.",
+      href: "/disponibilidad",
+    },
     { title: "Mis partidos", text: "Rival, lugar y hora de la pista reservada." },
     { title: "Clasificación", text: "Ganados, empatados, perdidos y puntos." },
   ];
@@ -52,23 +57,34 @@ export default async function Home() {
           )}
           {!profile.full_name && (
             <p className="mt-2 text-sm">
-              Pon tu nombre en <a href="/perfil" className="underline">Mi perfil</a> para que
+              Pon tu nombre en <Link href="/perfil" className="underline">Mi perfil</Link> para que
               los demás te reconozcan.
             </p>
           )}
         </section>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          {sections.map((s) => (
-            <div
-              key={s.title}
-              className="rounded-xl border border-dashed border-gray-300 p-4 opacity-60 dark:border-gray-700"
-            >
-              <h2 className="font-semibold">{s.title}</h2>
-              <p className="text-sm">{s.text}</p>
-              <p className="mt-2 text-xs uppercase tracking-wide">Próximamente</p>
-            </div>
-          ))}
+          {sections.map((s) =>
+            s.href ? (
+              <Link
+                key={s.title}
+                href={s.href}
+                className="rounded-xl border border-emerald-300 p-4 hover:bg-emerald-50 dark:border-emerald-800 dark:hover:bg-emerald-950"
+              >
+                <h2 className="font-semibold">{s.title}</h2>
+                <p className="text-sm">{s.text}</p>
+              </Link>
+            ) : (
+              <div
+                key={s.title}
+                className="rounded-xl border border-dashed border-gray-300 p-4 opacity-60 dark:border-gray-700"
+              >
+                <h2 className="font-semibold">{s.title}</h2>
+                <p className="text-sm">{s.text}</p>
+                <p className="mt-2 text-xs uppercase tracking-wide">Próximamente</p>
+              </div>
+            ),
+          )}
         </div>
       </main>
     </>
