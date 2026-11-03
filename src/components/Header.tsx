@@ -1,46 +1,46 @@
 import Image from "next/image";
 import Link from "next/link";
+import NavPills from "@/components/NavPills";
 import { displayName, type Profile } from "@/lib/session";
 
 export default function Header({ profile }: { profile: Profile }) {
-  const links = [
-    { href: "/disponibilidad", label: "Disponibilidad" },
-    { href: "/partidos", label: "Partidos" },
-    { href: "/clasificacion", label: "Clasificación" },
-    { href: "/perfil", label: "Mi perfil" },
-    ...(profile.is_organizer ? [{ href: "/admin/parejas", label: "Parejas" }] : []),
+  const items = [
+    { href: "/disponibilidad", label: "Disponibilidad", icon: "📅" },
+    { href: "/partidos", label: "Partidos", icon: "🎾" },
+    { href: "/clasificacion", label: "Clasificación", icon: "🏆" },
+    { href: "/perfil", label: "Mi perfil", icon: "👤" },
+    ...(profile.is_organizer ? [{ href: "/admin/parejas", label: "Parejas", icon: "👥" }] : []),
   ];
 
   return (
-    <header className="border-b border-gray-200 dark:border-gray-800">
-      <div className="mx-auto max-w-3xl px-4 py-3">
+    <header className="bg-neutral-950 text-white shadow-lg">
+      <div className="mx-auto max-w-3xl px-4 pt-3">
         <div className="flex items-center gap-3">
-          <Link href="/" className="flex min-w-0 items-center gap-2 font-bold">
+          <Link href="/" className="flex min-w-0 items-center gap-3">
             <Image
               src="/logo.png"
               alt=""
-              width={48}
-              height={48}
-              className="h-12 w-12 shrink-0 object-contain"
+              width={56}
+              height={56}
+              className="h-14 w-14 shrink-0 object-contain"
               priority
             />
-            <span className="leading-tight">Torneo Pádel Loyola</span>
+            <span className="min-w-0">
+              <span className="block text-lg font-extrabold leading-tight tracking-tight">
+                Torneo Pádel Loyola
+              </span>
+              <span className="block text-xs text-lime-300">Hola, {displayName(profile)}</span>
+            </span>
           </Link>
-          <div className="ml-auto flex shrink-0 flex-col items-end text-xs sm:flex-row sm:items-center sm:gap-3 sm:text-sm">
-            <span className="opacity-70">{displayName(profile)}</span>
-            <form action="/auth/signout" method="post">
-              <button className="underline">Salir</button>
-            </form>
-          </div>
+          <form action="/auth/signout" method="post" className="ml-auto shrink-0">
+            <button className="rounded-full border border-white/30 px-3 py-1 text-xs hover:bg-white/10">
+              Salir
+            </button>
+          </form>
         </div>
-        <nav className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-          {links.map((l) => (
-            <Link key={l.href} href={l.href} className="hover:underline">
-              {l.label}
-            </Link>
-          ))}
-        </nav>
+        <NavPills items={items} />
       </div>
+      <div className="h-1 bg-gradient-to-r from-red-600 via-red-500 to-lime-400" />
     </header>
   );
 }
