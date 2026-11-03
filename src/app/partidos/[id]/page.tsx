@@ -3,10 +3,18 @@ import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
 import { compareSlots } from "@/lib/pairing";
-import { MATCH_COLUMNS, formatBooking, formatSlot, loadPairDirectory, type Match } from "@/lib/matches";
+import {
+  MATCH_COLUMNS,
+  formatBooking,
+  formatResult,
+  formatSlot,
+  loadPairDirectory,
+  type Match,
+} from "@/lib/matches";
+import { RESULT_OPTIONS } from "@/lib/standings";
 import { requireProfile } from "@/lib/session";
 import { formatWeek, slotKey, weekDays } from "@/lib/weeks";
-import { deleteMatch, saveBooking, updateMatch } from "../actions";
+import { deleteMatch, saveBooking, saveResult, updateMatch } from "../actions";
 
 const input = "rounded-lg border border-gray-300 px-2 py-1 text-black";
 
@@ -49,6 +57,12 @@ export default async function MatchPage({
   const isPlayer = !!profile.pair_id && [match.pair_a, match.pair_b].includes(profile.pair_id);
   const canBook = isPlayer || profile.is_organizer;
   const booking = formatBooking(match.booking_at);
+  const result = formatResult(match, pairName);
+  const currentResult = match.sets_a === null ? "" : `${match.sets_a}-${match.sets_b}`;
+  const resultLabel = (a: number, b: number) =>
+    a === b
+      ? "1-1 · sin terminar, empate"
+      : `${a}-${b} · gana ${a > b ? pairName(match.pair_a) : pairName(match.pair_b)}`;
   const currentSlot = match.slot_day !== null && match.slot_hour !== null ? slotKey(match.slot_day, match.slot_hour) : "";
   const slotOptions = currentSlot && !common.includes(currentSlot) ? [currentSlot, ...common] : common;
 
@@ -79,6 +93,52 @@ export default async function MatchPage({
             </p>
           )}
         </section>
+
+        {match.status !== "cancelado" && (
+          <section className="mb-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+            <h2 className="font-semibold">Resultado</h2>
+            <p className="text-sm">{result ? <>🏆 {result}</> : "Sin resultado todavía."}</p>
+            {canBook && (
+              <form action={saveResult} className="mt-3 flex flex-col gap-2 text-sm">
+                <input type="hidden" name="id" value={match.id} />
+                <p className="text-xs opacity-70">
+                  Sets ganados por {pairName(match.pair_a)} y por {pairName(match.pair_b)}. Si el
+                  partido no se terminó, poned 1-1 (empate) o, si las dos parejas acordáis un
+                  ganador, 2-1 o 2-0.
+                </p>
+                <div className="flex flex-col gap-1">
+                  {RESULT_OPTIONS.map((o) => (
+                    <label key={o.value} className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="result"
+                        value={o.value}
+                        defaultChecked={currentResult === o.value}
+                      />
+                      {resultLabel(o.a, o.b)}
+                    </label>
+                  ))}
+                </div>
+                <input
+                  name="score_detail"
+                  defaultValue={match.score_detail ?? ""}
+                  placeholder="Juegos, opcional (ej.: 6-4 3-6 7-5)"
+                  className={input}
+                />
+                <div className="flex gap-3">
+                  <button className="rounded-lg bg-emerald-600 px-3 py-1 font-semibold text-white">
+                    Guardar resultado
+                  </button>
+                  {result && (
+                    <button name="clear" value="1" className="text-red-600 underline">
+                      Borrar resultado
+                    </button>
+                  )}
+                </div>
+              </form>
+            )}
+          </section>
+        )}
 
         <section className="mb-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
           <h2 className="font-semibold">Reserva de pista</h2>
@@ -142,9 +202,14 @@ export default async function MatchPage({
               </label>
               <label>
                 Estado{" "}
-                <select name="status" defaultValue={match.status} className={input}>
-                  <option value="programado">Programado</option>
-                  <option value="jugado">Jugado</option>
+                <select
+                  name="status"
+                  defaultValue={match.status === "cancelado" ? "cancelado" : match.status}
+                  className={input}
+                >
+                  <option value={match.status === "cancelado" ? "programado" : match.status}>
+                    Activo
+                  </option>
                   <option value="cancelado">Cancelado</option>
                 </select>
               </label>

@@ -12,7 +12,7 @@ para el torneo.
 - [x] Paso 1: login por email, perfiles, parejas y rol de organizador
 - [x] Paso 2: disponibilidad semanal
 - [x] Paso 3: emparejamientos
-- [ ] Paso 4: resultados y clasificación
+- [x] Paso 4: resultados y clasificación
 
 ## Puesta en marcha (una sola vez)
 
@@ -59,7 +59,7 @@ npm install
 npm run dev
 ```
 
-`npm test` comprueba el algoritmo de emparejamiento.
+`npm test` comprueba el algoritmo de emparejamiento y el cálculo de la clasificación.
 
 Añade `http://localhost:3000/auth/callback` a las Redirect URLs de Supabase para poder entrar en
 local.

@@ -32,7 +32,11 @@ export default async function Home() {
       text: "Rival, lugar y hora de la pista reservada.",
       href: "/partidos",
     },
-    { title: "Clasificación", text: "Ganados, empatados, perdidos y puntos." },
+    {
+      title: "Clasificación",
+      text: "Ganados, empatados, perdidos y puntos.",
+      href: "/clasificacion",
+    },
   ];
 
   return (

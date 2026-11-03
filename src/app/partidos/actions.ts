@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { makePairings, type Candidate } from "@/lib/pairing";
 import { requireOrganizer, requireProfile } from "@/lib/session";
+import { RESULT_OPTIONS } from "@/lib/standings";
 import { slotKey, weekDays } from "@/lib/weeks";
 
 function back(path: string, params: Record<string, string>) {
@@ -141,4 +142,31 @@ export async function saveBooking(formData: FormData) {
     return back(`/partidos/${id}`, { error: "Solo los jugadores del partido pueden cambiar la reserva" });
   }
   back(`/partidos/${id}`, error ? { error: error.message } : { ok: "Reserva guardada." });
+}
+
+export async function saveResult(formData: FormData) {
+  const { supabase } = await requireProfile();
+  const id = String(formData.get("id"));
+  const result = String(formData.get("result") ?? "");
+  const option = RESULT_OPTIONS.find((o) => o.value === result);
+  const detail = String(formData.get("score_detail") ?? "").trim().slice(0, 60);
+  const clear = formData.get("clear") === "1";
+  if (!clear && !option) return back(`/partidos/${id}`, { error: "Elige un resultado" });
+
+  const { data, error } = await supabase
+    .from("matches")
+    .update(
+      clear
+        ? { sets_a: null, sets_b: null, score_detail: null }
+        : { sets_a: option!.a, sets_b: option!.b, score_detail: detail || null },
+    )
+    .eq("id", id)
+    .select("id");
+  if (!error && !data?.length) {
+    return back(`/partidos/${id}`, { error: "Solo los jugadores del partido pueden poner el resultado" });
+  }
+  back(
+    `/partidos/${id}`,
+    error ? { error: error.message } : { ok: clear ? "Resultado borrado." : "Resultado guardado." },
+  );
 }

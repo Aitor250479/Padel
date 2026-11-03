@@ -11,10 +11,13 @@ export type Match = {
   booking_place: string | null;
   booking_at: string | null;
   status: "programado" | "jugado" | "cancelado";
+  sets_a: number | null;
+  sets_b: number | null;
+  score_detail: string | null;
 };
 
 export const MATCH_COLUMNS =
-  "id, week_start, pair_a, pair_b, slot_day, slot_hour, booking_place, booking_at, status";
+  "id, week_start, pair_a, pair_b, slot_day, slot_hour, booking_place, booking_at, status, sets_a, sets_b, score_detail";
 
 /** Nombres de parejas y de sus jugadores, para mostrar partidos. */
 export async function loadPairDirectory(supabase: SupabaseClient) {
@@ -48,4 +51,12 @@ export function formatBooking(at: string | null) {
   const [day, time] = at.split("T");
   const d = new Date(`${day}T00:00:00Z`);
   return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()}/${d.getUTCMonth() + 1} a las ${time.slice(0, 5)}`;
+}
+
+/** "Los Toros 2-1 Smash (6-4 3-6 7-5)" o null si no hay resultado. */
+export function formatResult(m: Match, pairName: (id: string) => string) {
+  if (m.sets_a === null || m.sets_b === null) return null;
+  const base = `${pairName(m.pair_a)} ${m.sets_a}-${m.sets_b} ${pairName(m.pair_b)}`;
+  const tie = m.sets_a === m.sets_b ? " · sin terminar, empate" : "";
+  return base + (m.score_detail ? ` (${m.score_detail})` : "") + tie;
 }
