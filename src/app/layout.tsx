@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Torneo de pádel",
+  title: "Torneo Pádel Loyola y CIA",
   description: "Disponibilidad, partidos y clasificación del torneo",
 };
 

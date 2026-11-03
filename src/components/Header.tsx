@@ -6,7 +6,7 @@ export default function Header({ profile }: { profile: Profile }) {
     <header className="border-b border-gray-200 dark:border-gray-800">
       <nav className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-sm">
         <Link href="/" className="text-base font-bold">
-          🎾 Torneo
+          🎾 Torneo Pádel Loyola y CIA
         </Link>
         <Link href="/disponibilidad">Disponibilidad</Link>
         <Link href="/partidos">Partidos</Link>

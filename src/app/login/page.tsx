@@ -27,7 +27,7 @@ function LoginForm() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
-      <h1 className="mb-2 text-3xl font-bold">🎾 Torneo de pádel</h1>
+      <h1 className="mb-2 text-3xl font-bold">🎾 Torneo Pádel Loyola y CIA</h1>
       <p className="mb-6 text-sm opacity-70">
         Escribe tu email y te enviaremos un enlace para entrar. No hace falta contraseña.
       </p>
