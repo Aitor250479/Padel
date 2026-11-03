@@ -1,4 +1,4 @@
-# Torneo Pádel Loyola y CIA
+# Torneo Pádel Loyola
 
 Web para organizar un torneo de pádel en el que las parejas marcan su disponibilidad cada
 semana y un organizador lanza los emparejamientos.

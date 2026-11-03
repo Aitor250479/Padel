@@ -44,7 +44,7 @@ export default async function Home() {
       <Header profile={profile} />
       <main className="mx-auto max-w-3xl px-4 py-6">
         <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-          Torneo Pádel Loyola y CIA
+          Torneo Pádel Loyola
         </p>
         <h1 className="mb-4 text-2xl font-bold">Hola, {displayName(profile)}</h1>
 

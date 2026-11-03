@@ -24,7 +24,7 @@ export default function Header({ profile }: { profile: Profile }) {
               className="h-12 w-12 shrink-0 object-contain"
               priority
             />
-            <span className="leading-tight">Torneo Pádel Loyola y CIA</span>
+            <span className="leading-tight">Torneo Pádel Loyola</span>
           </Link>
           <div className="ml-auto flex shrink-0 flex-col items-end text-xs sm:flex-row sm:items-center sm:gap-3 sm:text-sm">
             <span className="opacity-70">{displayName(profile)}</span>
