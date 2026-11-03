@@ -1,7 +1,14 @@
 import Link from "next/link";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
-import { MATCH_COLUMNS, formatBooking, formatSlot, loadPairDirectory, type Match } from "@/lib/matches";
+import {
+  MATCH_COLUMNS,
+  formatBooking,
+  formatResult,
+  formatSlot,
+  loadPairDirectory,
+  type Match,
+} from "@/lib/matches";
 import { requireProfile } from "@/lib/session";
 import { addDays, formatWeek, parseWeek, weekDays } from "@/lib/weeks";
 import { createMatch, generatePairings } from "./actions";
@@ -72,6 +79,7 @@ export default async function PartidosPage({
             {(matches ?? []).map((m) => {
               const mine = profile.pair_id && [m.pair_a, m.pair_b].includes(profile.pair_id);
               const booking = formatBooking(m.booking_at);
+              const result = formatResult(m, pairName);
               return (
                 <li key={m.id}>
                   <Link
@@ -91,7 +99,9 @@ export default async function PartidosPage({
                       {playersOf(m.pair_a) || "—"} · {playersOf(m.pair_b) || "—"}
                     </p>
                     <p className="mt-1 text-sm">
-                      {booking ? (
+                      {result ? (
+                        <>🏆 {result}</>
+                      ) : booking ? (
                         <>
                           📍 {m.booking_place || "Lugar sin indicar"}, {booking}
                         </>
