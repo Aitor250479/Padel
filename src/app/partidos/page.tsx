@@ -1,16 +1,19 @@
 import Link from "next/link";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
+import { availablePairIds } from "@/lib/availability";
 import {
   MATCH_COLUMNS,
+  PROPOSED_COLUMNS,
   formatBooking,
-  formatResult,
-  formatSlot,
   loadPairDirectory,
+  resultOpen,
+  resultStatus,
   type Match,
+  type ProposedResult,
 } from "@/lib/matches";
 import { requireProfile } from "@/lib/session";
-import { addDays, formatWeek, parseWeek, weekDays } from "@/lib/weeks";
+import { addDays, formatWeek, nowInSpain, parseWeek } from "@/lib/weeks";
 import { createMatch, generatePairings } from "./actions";
 
 const input = "rounded-lg border border-gray-300 px-2 py-1 text-black";
@@ -23,37 +26,31 @@ export default async function PartidosPage({
   const { supabase, profile } = await requireProfile();
   const params = await searchParams;
   const weekStart = parseWeek(params.semana);
-  const days = weekDays(weekStart);
+  const now = nowInSpain();
 
-  const [{ pairs, pairName, playersOf }, { data: matches }, { data: slots }, { data: weeks }] =
-    await Promise.all([
-      loadPairDirectory(supabase),
-      supabase
-        .from("matches")
-        .select(MATCH_COLUMNS)
-        .eq("week_start", weekStart)
-        .order("slot_day", { nullsFirst: false })
-        .order("slot_hour")
-        .returns<Match[]>(),
-      supabase
-        .from("availability")
-        .select("pair_id")
-        .gte("day", days[0])
-        .lte("day", days[6])
-        .returns<{ pair_id: string }[]>(),
-      supabase
-        .from("availability_weeks")
-        .select("pair_id")
-        .eq("week_start", weekStart)
-        .returns<{ pair_id: string }[]>(),
-    ]);
+  const [{ pairs, pairName, playersOf }, { data: matches }, available] = await Promise.all([
+    loadPairDirectory(supabase),
+    supabase
+      .from("matches")
+      .select(MATCH_COLUMNS)
+      .eq("week_start", weekStart)
+      .order("booking_at", { nullsFirst: false })
+      .returns<Match[]>(),
+    availablePairIds(supabase, weekStart),
+  ]);
+  const ids = (matches ?? []).map((m) => m.id);
+  const { data: proposals } = ids.length
+    ? await supabase
+        .from("match_results")
+        .select(PROPOSED_COLUMNS)
+        .in("match_id", ids)
+        .returns<ProposedResult[]>()
+    : { data: [] as ProposedResult[] };
 
   const active = (matches ?? []).filter((m) => m.status !== "cancelado");
   const busy = new Set(active.flatMap((m) => [m.pair_a, m.pair_b]));
-  const withSlots = new Set((slots ?? []).map((s) => s.pair_id));
-  const answered = new Set((weeks ?? []).map((w) => w.pair_id));
+  const availableSet = new Set(available);
   const free = pairs.filter((p) => !busy.has(p.id));
-  const notAnswered = free.filter((p) => !answered.has(p.id));
 
   return (
     <>
@@ -77,9 +74,10 @@ export default async function PartidosPage({
         ) : (
           <ul className="mb-6 flex flex-col gap-2">
             {(matches ?? []).map((m) => {
-              const mine = profile.pair_id && [m.pair_a, m.pair_b].includes(profile.pair_id);
+              const mine = !!profile.pair_id && [m.pair_a, m.pair_b].includes(profile.pair_id);
               const booking = formatBooking(m.booking_at);
-              const result = formatResult(m, pairName);
+              const status = resultStatus(m, proposals ?? [], pairName);
+              const showResult = status.tone === "ok" || (proposals ?? []).some((p) => p.match_id === m.id) || resultOpen(m, now);
               return (
                 <li key={m.id}>
                   <Link
@@ -98,20 +96,28 @@ export default async function PartidosPage({
                     <p className="text-xs opacity-70">
                       {playersOf(m.pair_a) || "—"} · {playersOf(m.pair_b) || "—"}
                     </p>
-                    <p className="mt-1 text-sm">
-                      {result ? (
-                        <>🏆 {result}</>
-                      ) : booking ? (
-                        <>
-                          📍 {m.booking_place || "Lugar sin indicar"}, {booking}
-                        </>
-                      ) : (
-                        <>
-                          Coinciden el {formatSlot(m.slot_day, m.slot_hour)} ·{" "}
-                          <span className="text-amber-700">pista sin reservar</span>
-                        </>
-                      )}
-                    </p>
+                    {m.status !== "cancelado" && (
+                      <>
+                        <p className="mt-1 text-sm">
+                          {booking ? (
+                            <>📍 {m.booking_place || "Lugar sin indicar"}, {booking}</>
+                          ) : (
+                            <span className="text-amber-700">Falta poner lugar, fecha y hora</span>
+                          )}
+                        </p>
+                        {showResult && (
+                          <p
+                            className={[
+                              "mt-1 text-sm",
+                              status.tone === "ok" ? "font-semibold" : status.tone === "warn" ? "text-red-600" : "text-amber-700",
+                            ].join(" ")}
+                          >
+                            {status.tone === "ok" ? "🏆 " : ""}
+                            {status.text}
+                          </p>
+                        )}
+                      </>
+                    )}
                   </Link>
                 </li>
               );
@@ -127,11 +133,7 @@ export default async function PartidosPage({
                 <li key={p.id}>
                   {p.name}{" "}
                   <span className="opacity-60">
-                    {!answered.has(p.id)
-                      ? "· no ha indicado disponibilidad"
-                      : !withSlots.has(p.id)
-                        ? "· no puede esta semana"
-                        : "· sin rival que coincida"}
+                    {availableSet.has(p.id) ? "· pueden jugar" : "· no pueden o falta que respondan"}
                   </span>
                 </li>
               ))}
@@ -149,11 +151,10 @@ export default async function PartidosPage({
               </button>
             </form>
             <p className="mb-4 text-xs opacity-70">
-              Empareja al azar a las parejas sin partido que coinciden en alguna franja, priorizando
-              a quien menos partidos lleva. Los partidos ya creados no se tocan, así que se puede
-              volver a pulsar cuando más parejas indiquen su disponibilidad.
-              {notAnswered.length > 0 &&
-                ` Ojo: ${notAnswered.length} pareja(s) aún no han indicado disponibilidad.`}
+              Empareja al azar a las parejas sin partido en las que los dos jugadores pueden jugar
+              esta semana ({free.filter((p) => availableSet.has(p.id)).length} ahora mismo),
+              priorizando como rival a quien menos partidos lleva. Si son impares, descansa la que
+              más partidos lleva. Los partidos ya creados no se tocan.
             </p>
 
             <h3 className="mb-1 text-sm font-semibold">Crear partido a mano</h3>
