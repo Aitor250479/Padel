@@ -76,3 +76,37 @@ export function nowInSpain() {
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "00";
   return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
 }
+
+const MONTHS = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+
+/** "10 al 16 de noviembre" o "27 de octubre al 2 de noviembre". */
+export function formatWeekLong(weekStart: string) {
+  const a = toDate(weekStart);
+  const b = toDate(addDays(weekStart, 6));
+  const end = `${b.getUTCDate()} de ${MONTHS[b.getUTCMonth()]}`;
+  return a.getUTCMonth() === b.getUTCMonth()
+    ? `${a.getUTCDate()} al ${end}`
+    : `${a.getUTCDate()} de ${MONTHS[a.getUTCMonth()]} al ${end}`;
+}
+
+/** Lunes de la semana en curso (hora de España). */
+export function currentWeek() {
+  return mondayOf(todayInSpain());
+}
+
+/** Semanas entre la semana en curso y la indicada (negativo = pasada). */
+export function weeksFromNow(weekStart: string, current = currentWeek()) {
+  return Math.round((toDate(weekStart).getTime() - toDate(current).getTime()) / (7 * 86400000));
+}
+
+/** "Esta semana", "Próxima semana", "Dentro de 3 semanas"… */
+export function weekLabel(weeks: number) {
+  if (weeks === 0) return "Esta semana";
+  if (weeks === 1) return "Próxima semana";
+  if (weeks > 1) return `Dentro de ${weeks} semanas`;
+  if (weeks === -1) return "Semana pasada";
+  return `Hace ${-weeks} semanas`;
+}
