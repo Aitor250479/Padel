@@ -26,9 +26,11 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims valida el token localmente (con las claves públicas de Supabase,
+  // que se guardan en caché) en vez de preguntar a Supabase en cada clic.
+  // También renueva la sesión si ha caducado.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims?.sub ? data.claims : null;
 
   const isPublic = PUBLIC_PATHS.some((p) => request.nextUrl.pathname.startsWith(p));
   if (!user && !isPublic) {

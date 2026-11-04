@@ -1,9 +1,21 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 
 type Item = { href: string; label: string; icon: string };
+
+function PillContent({ icon, label }: { icon: string; label: string }) {
+  const { pending } = useLinkStatus();
+  return (
+    <>
+      <span aria-hidden className={pending ? "inline-block animate-spin" : undefined}>
+        {pending ? "⏳" : icon}
+      </span>
+      {label}
+    </>
+  );
+}
 
 export default function NavPills({ items }: { items: Item[] }) {
   const pathname = usePathname();
@@ -17,14 +29,13 @@ export default function NavPills({ items }: { items: Item[] }) {
             href={i.href}
             aria-current={active ? "page" : undefined}
             className={[
-              "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
+              "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors active:scale-95",
               active
                 ? "bg-lime-400 text-neutral-950"
                 : "bg-white/10 text-white hover:bg-white/20",
             ].join(" ")}
           >
-            <span aria-hidden>{i.icon}</span>
-            {i.label}
+            <PillContent icon={i.icon} label={i.label} />
           </Link>
         );
       })}
