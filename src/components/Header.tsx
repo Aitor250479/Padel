@@ -9,7 +9,12 @@ export default function Header({ profile }: { profile: Profile }) {
     { href: "/partidos", label: "Partidos", icon: "🎾" },
     { href: "/clasificacion", label: "Clasificación", icon: "🏆" },
     { href: "/perfil", label: "Mi perfil", icon: "👤" },
-    ...(profile.is_organizer ? [{ href: "/admin/parejas", label: "Parejas", icon: "👥" }] : []),
+    ...(profile.is_organizer
+      ? [
+          { href: "/admin/parejas", label: "Parejas", icon: "👥" },
+          { href: "/admin/bienvenida", label: "Texto de Bienvenida", icon: "✍️" },
+        ]
+      : []),
   ];
 
   return (

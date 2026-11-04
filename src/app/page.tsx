@@ -1,102 +1,36 @@
 import Link from "next/link";
 import Header from "@/components/Header";
-import { displayName, requireProfile, type Pair, type Profile } from "@/lib/session";
+import { requireProfile } from "@/lib/session";
+import { WELCOME_KEY } from "@/lib/welcome";
 
 export default async function Home() {
   const { supabase, profile } = await requireProfile();
-
-  let pair: Pair | null = null;
-  let partner: Profile | null = null;
-  if (profile.pair_id) {
-    const [{ data: p }, { data: mates }] = await Promise.all([
-      supabase.from("pairs").select("id, name").eq("id", profile.pair_id).single<Pair>(),
-      supabase
-        .from("profiles")
-        .select("id, email, full_name, is_organizer, pair_id")
-        .eq("pair_id", profile.pair_id)
-        .neq("id", profile.id)
-        .returns<Profile[]>(),
-    ]);
-    pair = p;
-    partner = mates?.[0] ?? null;
-  }
-
-  const sections: { title: string; text: string; href?: string }[] = [
-    {
-      title: "Disponibilidad semanal",
-      text: "Indica si puedes jugar esta semana.",
-      href: "/disponibilidad",
-    },
-    {
-      title: "Partidos",
-      text: "Rival, lugar, fecha y hora, y resultado.",
-      href: "/partidos",
-    },
-    {
-      title: "Clasificación",
-      text: "Ganados, empatados, perdidos y puntos.",
-      href: "/clasificacion",
-    },
-  ];
+  const { data } = await supabase
+    .from("site_texts")
+    .select("body")
+    .eq("key", WELCOME_KEY)
+    .maybeSingle<{ body: string }>();
+  const text = data?.body?.trim() || "¡Bienvenidos al Torneo Pádel Loyola! 🎾";
 
   return (
     <>
       <Header profile={profile} />
       <main className="mx-auto max-w-3xl px-4 py-6">
-        <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-          Torneo Pádel Loyola
-        </p>
-        <h1 className="mb-4 text-2xl font-bold">Hola, {displayName(profile)}</h1>
-
-        <section className="mb-6 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
-          {pair ? (
-            <p>
-              Juegas en la pareja <b>{pair.name}</b>
-              {partner ? (
-                <>
-                  {" "}
-                  con <b>{displayName(partner)}</b>.
-                </>
-              ) : (
-                ". Aún falta asignar a tu compañero o compañera."
-              )}
-            </p>
-          ) : (
-            <p>
-              Todavía no tienes pareja asignada. Un organizador te la asignará pronto.
-            </p>
-          )}
-          {!profile.full_name && (
-            <p className="mt-2 text-sm">
-              Pon tu nombre en <Link href="/perfil" className="underline">Mi perfil</Link> para que
-              los demás te reconozcan.
-            </p>
-          )}
+        <section className="whitespace-pre-line rounded-2xl border-l-4 border-lime-400 bg-neutral-50 p-5 text-lg leading-relaxed shadow-sm dark:bg-neutral-900">
+          {text}
         </section>
 
-        <div className="grid gap-3 sm:grid-cols-3">
-          {sections.map((s) =>
-            s.href ? (
-              <Link
-                key={s.title}
-                href={s.href}
-                className="rounded-xl border border-emerald-300 p-4 hover:bg-emerald-50 dark:border-emerald-800 dark:hover:bg-emerald-950"
-              >
-                <h2 className="font-semibold">{s.title}</h2>
-                <p className="text-sm">{s.text}</p>
-              </Link>
-            ) : (
-              <div
-                key={s.title}
-                className="rounded-xl border border-dashed border-gray-300 p-4 opacity-60 dark:border-gray-700"
-              >
-                <h2 className="font-semibold">{s.title}</h2>
-                <p className="text-sm">{s.text}</p>
-                <p className="mt-2 text-xs uppercase tracking-wide">Próximamente</p>
-              </div>
-            ),
-          )}
-        </div>
+        {(!profile.pair_id || !profile.full_name) && (
+          <div className="mt-4 flex flex-col gap-1 text-sm opacity-80">
+            {!profile.pair_id && <p>Todavía no tienes pareja asignada. Un organizador te la asignará pronto.</p>}
+            {!profile.full_name && (
+              <p>
+                Pon tu nombre en <Link href="/perfil" className="underline">Mi perfil</Link> para que
+                los demás te reconozcan.
+              </p>
+            )}
+          </div>
+        )}
       </main>
     </>
   );
