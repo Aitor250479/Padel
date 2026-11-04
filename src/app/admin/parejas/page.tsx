@@ -1,16 +1,9 @@
+import Link from "next/link";
 import Header from "@/components/Header";
+import Notice from "@/components/Notice";
 import { displayName, requireOrganizer, type Pair, type Profile } from "@/lib/session";
-import {
-  assignPlayer,
-  createPair,
-  deletePair,
-  renamePair,
-  setPlayerPassword,
-  toggleOrganizer,
-} from "./actions";
-
-const input = "rounded-lg border border-gray-300 px-2 py-1 text-black";
-const button = "rounded-lg bg-emerald-600 px-3 py-1 text-sm font-semibold text-white";
+import { createPair } from "./actions";
+import { button, input, rowLink } from "./ui";
 
 export default async function ParejasPage({
   searchParams,
@@ -25,116 +18,78 @@ export default async function ParejasPage({
     supabase
       .from("profiles")
       .select("id, email, full_name, is_organizer, pair_id")
-      .order("created_at")
+      .order("full_name")
       .returns<Profile[]>(),
   ]);
 
   const playersOf = (pairId: string) => (players ?? []).filter((p) => p.pair_id === pairId);
+  const unassigned = (players ?? []).filter((p) => !p.pair_id);
 
   return (
     <>
       <Header profile={profile} />
       <main className="mx-auto max-w-3xl px-4 py-6">
         <h1 className="mb-4 text-2xl font-bold">Parejas y jugadores</h1>
+        <Notice ok={ok} error={error} />
 
-        {error && <p className="mb-4 rounded-lg bg-red-100 p-3 text-red-900">{error}</p>}
-        {ok && <p className="mb-4 rounded-lg bg-emerald-100 p-3 text-emerald-900">{ok}</p>}
+        <section className="mb-8">
+          <h2 className="mb-3 text-lg font-semibold">Parejas ({pairs?.length ?? 0})</h2>
+          <ul className="mb-3 grid gap-2 sm:grid-cols-2">
+            {(pairs ?? []).map((pair) => {
+              const members = playersOf(pair.id);
+              return (
+                <li key={pair.id}>
+                  <Link href={`/admin/parejas/${pair.id}`} className={rowLink}>
+                    <span className="min-w-0">
+                      <span className="block font-semibold">{pair.name}</span>
+                      <span className="block truncate text-sm opacity-70">
+                        {members.length ? members.map((m) => displayName(m)).join(" y ") : "Sin jugadores"}
+                      </span>
+                    </span>
+                    {members.length < 2 && (
+                      <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
+                        {members.length === 1 ? "Falta 1" : "Vacía"}
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          <details className="text-sm">
+            <summary className="cursor-pointer font-semibold text-emerald-700 dark:text-emerald-400">
+              ➕ Crear pareja
+            </summary>
+            <form action={createPair} className="mt-2 flex gap-2">
+              <input name="name" required placeholder="Nombre de la pareja" className={`${input} flex-1`} />
+              <button className={button}>Crear</button>
+            </form>
+          </details>
+        </section>
 
-        <form action={createPair} className="mb-6 flex gap-2">
-          <input name="name" placeholder="Nombre de la nueva pareja" className={`${input} flex-1`} />
-          <button className={button}>Crear pareja</button>
-        </form>
-
-        <h2 className="mb-2 text-lg font-semibold">Parejas ({pairs?.length ?? 0})</h2>
-        <ul className="mb-8 flex flex-col gap-2">
-          {(pairs ?? []).map((pair) => {
-            const members = playersOf(pair.id);
-            return (
-              <li
-                key={pair.id}
-                className="rounded-xl border border-gray-200 p-3 dark:border-gray-800"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <form action={renamePair} className="flex flex-1 gap-2">
-                    <input type="hidden" name="id" value={pair.id} />
-                    <input name="name" defaultValue={pair.name} className={`${input} flex-1`} />
-                    <button className="text-sm underline">Renombrar</button>
-                  </form>
-                  <form action={deletePair}>
-                    <input type="hidden" name="id" value={pair.id} />
-                    <button className="text-sm text-red-600 underline">Borrar</button>
-                  </form>
-                </div>
-                <p className="mt-1 text-sm opacity-80">
-                  {members.length
-                    ? members.map((m) => displayName(m)).join(" y ")
-                    : "Sin jugadores"}
-                  {members.length === 1 && " (falta uno)"}
-                </p>
-              </li>
-            );
-          })}
-        </ul>
-
-        <h2 className="mb-2 text-lg font-semibold">Jugadores ({players?.length ?? 0})</h2>
-        <p className="mb-3 text-sm opacity-70">
-          Los jugadores aparecen aquí cuando entran por primera vez con su email.
-        </p>
-        <ul className="flex flex-col gap-2">
-          {(players ?? []).map((p) => (
-            <li
-              key={p.id}
-              className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 p-3 dark:border-gray-800"
-            >
-              <div className="min-w-40 flex-1">
-                <p className="font-medium">
-                  {displayName(p)} {p.is_organizer && <span className="text-xs">⭐ organizador</span>}
-                </p>
-                <p className="text-xs opacity-60">{p.email}</p>
-              </div>
-              <form action={assignPlayer} className="flex gap-2">
-                <input type="hidden" name="player_id" value={p.id} />
-                <select name="pair_id" defaultValue={p.pair_id ?? ""} className={input}>
-                  <option value="">Sin pareja</option>
-                  {(pairs ?? []).map((pair) => (
-                    <option key={pair.id} value={pair.id}>
-                      {pair.name}
-                    </option>
-                  ))}
-                </select>
-                <button className={button}>Asignar</button>
-              </form>
-              <details className="w-full text-sm">
-                <summary className="cursor-pointer underline">Cambiar contraseña</summary>
-                <form action={setPlayerPassword} className="mt-2 flex flex-wrap gap-2">
-                  <input type="hidden" name="player_id" value={p.id} />
-                  <input
-                    name="password"
-                    type="text"
-                    required
-                    minLength={6}
-                    autoComplete="off"
-                    placeholder="Nueva contraseña (mín. 6)"
-                    className={`${input} flex-1`}
-                  />
-                  <button className={button}>Guardar</button>
-                </form>
-                <p className="mt-1 text-xs opacity-60">
-                  Luego pásasela al jugador. Podrá cambiarla en Mi perfil.
-                </p>
-              </details>
-              {p.id !== profile.id && (
-                <form action={toggleOrganizer}>
-                  <input type="hidden" name="player_id" value={p.id} />
-                  <input type="hidden" name="value" value={String(!p.is_organizer)} />
-                  <button className="text-sm underline">
-                    {p.is_organizer ? "Quitar organizador" : "Hacer organizador"}
-                  </button>
-                </form>
-              )}
-            </li>
-          ))}
-        </ul>
+        <section>
+          <h2 className="mb-1 text-lg font-semibold">Jugadores sin pareja ({unassigned.length})</h2>
+          <p className="mb-3 text-sm opacity-70">
+            Aparecen aquí cuando se dan de alta en la web. Entra en uno para asignarle pareja.
+          </p>
+          {unassigned.length ? (
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {unassigned.map((p) => (
+                <li key={p.id}>
+                  <Link href={`/admin/jugadores/${p.id}`} className={rowLink}>
+                    <span className="min-w-0">
+                      <span className="block font-semibold">{displayName(p)}</span>
+                      <span className="block truncate text-xs opacity-60">{p.email}</span>
+                    </span>
+                    <span aria-hidden className="opacity-50">›</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm opacity-70">Todos los jugadores tienen pareja. 🎉</p>
+          )}
+        </section>
       </main>
     </>
   );

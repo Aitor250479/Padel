@@ -3,7 +3,7 @@
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 
-type Item = { href: string; label: string; icon: string };
+type Item = { href: string; label: string; icon: string; also?: string[] };
 
 function PillContent({ icon, label }: { icon: string; label: string }) {
   const { pending } = useLinkStatus();
@@ -22,7 +22,9 @@ export default function NavPills({ items }: { items: Item[] }) {
   return (
     <nav className="mt-3 flex flex-wrap justify-center gap-2 pb-3">
       {items.map((i) => {
-        const active = pathname === i.href || pathname.startsWith(`${i.href}/`);
+        const active = [i.href, ...(i.also ?? [])].some(
+          (h) => pathname === h || pathname.startsWith(`${h}/`),
+        );
         return (
           <Link
             key={i.href}
