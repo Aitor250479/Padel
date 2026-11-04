@@ -61,11 +61,19 @@ export default async function ClasificacionPage() {
             </tbody>
           </table>
         </div>
-        <p className="mt-4 text-xs opacity-70">
-          1 punto por cada set ganado: ganar 2-0 da 3 puntos, ganar 2-1 da 2, perder 1-2 da 1 y
-          perder 0-2 da 0. Un partido sin terminar cuenta como empate (1 punto cada pareja). A
-          igualdad de puntos, desempatan los partidos ganados y luego la diferencia de sets.
-        </p>
+        <div className="mt-4 text-xs opacity-70">
+          <p className="font-semibold">
+            Ganas 1 punto por cada set ganado, y 1 punto extra si ganas sin ceder ningún set.
+          </p>
+          <ul className="my-1 list-inside list-disc">
+            <li>Ganar 2-0: 3 puntos (2 sets + 1 extra)</li>
+            <li>Ganar 2-1: 2 puntos</li>
+            <li>Perder 1-2: 1 punto</li>
+            <li>Perder 0-2: 0 puntos</li>
+            <li>Partido sin terminar: empate, 1 punto para cada pareja</li>
+          </ul>
+          <p>A igualdad de puntos, desempatan los partidos ganados y luego la diferencia de sets.</p>
+        </div>
       </main>
     </>
   );
