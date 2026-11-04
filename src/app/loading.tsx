@@ -8,14 +8,14 @@ export default function Loading() {
       aria-live="polite"
     >
       <Image
-        src="/logo.png"
-        alt="Cargando"
-        width={180}
-        height={180}
-        className="loading-logo h-44 w-44 object-contain drop-shadow-lg"
+        src="/cargando.png"
+        alt="Cargando datos"
+        width={256}
+        height={256}
+        className="loading-logo h-64 w-64 object-contain drop-shadow-lg"
         priority
+        unoptimized
       />
-      <p className="text-sm font-semibold opacity-70">Cargando…</p>
     </main>
   );
 }

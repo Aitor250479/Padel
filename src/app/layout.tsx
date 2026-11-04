@@ -12,6 +12,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="es">
       <body className="antialiased">
+        {/* Precarga la imagen de "Cargando datos" para que salga al instante */}
+        <link rel="preload" href="/cargando.png" as="image" />
         {children}
         <Footer />
       </body>
