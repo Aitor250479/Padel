@@ -23,3 +23,15 @@ export async function savePassword(formData: FormData) {
     `/perfil?ok=${encodeURIComponent("Contraseña guardada. A partir de ahora entra con tu email y esta contraseña.")}`,
   );
 }
+
+export async function saveEmail(formData: FormData) {
+  const { supabase, profile } = await requireProfile();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (email === profile.email) redirect(`/perfil?error=${encodeURIComponent("Ese ya es tu email.")}`);
+  const { error } = await supabase.rpc("change_email", { target: profile.id, new_email: email });
+  if (error) redirect(`/perfil?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/", "layout");
+  redirect(
+    `/perfil?ok=${encodeURIComponent(`Email cambiado. A partir de ahora entra con ${email} y tu contraseña de siempre.`)}`,
+  );
+}

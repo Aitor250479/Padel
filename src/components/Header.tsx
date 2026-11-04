@@ -11,7 +11,7 @@ export default function Header({ profile }: { profile: Profile }) {
     { href: "/perfil", label: "Mi perfil", icon: "👤" },
     ...(profile.is_organizer
       ? [
-          { href: "/admin/parejas", label: "Parejas", icon: "👥" },
+          { href: "/admin/parejas", label: "Parejas", icon: "👥", also: ["/admin/jugadores"] },
           { href: "/admin/bienvenida", label: "Texto de Bienvenida", icon: "✍️" },
         ]
       : []),

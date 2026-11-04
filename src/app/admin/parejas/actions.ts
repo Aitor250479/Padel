@@ -4,33 +4,44 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireOrganizer } from "@/lib/session";
 
-function done(error?: { message: string } | null) {
+/** Vuelve a la pantalla indicada en el campo "back" (solo rutas de /admin). */
+function backTo(formData: FormData, fallback = "/admin/parejas") {
+  const back = String(formData.get("back") ?? "");
+  return back.startsWith("/admin/") ? back : fallback;
+}
+
+function done(path: string, result?: { error?: { message: string } | null; ok?: string }) {
   revalidatePath("/", "layout");
-  if (error) redirect(`/admin/parejas?error=${encodeURIComponent(error.message)}`);
-  redirect("/admin/parejas");
+  if (result?.error) redirect(`${path}?error=${encodeURIComponent(result.error.message)}`);
+  if (result?.ok) redirect(`${path}?ok=${encodeURIComponent(result.ok)}`);
+  redirect(path);
 }
 
 export async function createPair(formData: FormData) {
   const { supabase } = await requireOrganizer();
   const name = String(formData.get("name") ?? "").trim();
-  if (!name) return done({ message: "Pon un nombre a la pareja" });
-  const { error } = await supabase.from("pairs").insert({ name });
-  done(error);
+  if (!name) return done("/admin/parejas", { error: { message: "Pon un nombre a la pareja" } });
+  const { data, error } = await supabase.from("pairs").insert({ name }).select("id").single();
+  if (error || !data) return done("/admin/parejas", { error });
+  done(`/admin/parejas/${data.id}`, { ok: "Pareja creada. Añádele sus dos jugadores." });
 }
 
 export async function renamePair(formData: FormData) {
   const { supabase } = await requireOrganizer();
   const id = String(formData.get("id"));
   const name = String(formData.get("name") ?? "").trim();
-  if (!name) return done({ message: "El nombre no puede estar vacío" });
+  const path = `/admin/parejas/${id}`;
+  if (!name) return done(path, { error: { message: "El nombre no puede estar vacío" } });
   const { error } = await supabase.from("pairs").update({ name }).eq("id", id);
-  done(error);
+  done(path, error ? { error } : { ok: "Nombre cambiado" });
 }
 
 export async function deletePair(formData: FormData) {
   const { supabase } = await requireOrganizer();
-  const { error } = await supabase.from("pairs").delete().eq("id", String(formData.get("id")));
-  done(error);
+  const id = String(formData.get("id"));
+  const { error } = await supabase.from("pairs").delete().eq("id", id);
+  if (error) return done(`/admin/parejas/${id}`, { error });
+  done("/admin/parejas", { ok: "Pareja borrada" });
 }
 
 export async function assignPlayer(formData: FormData) {
@@ -41,31 +52,53 @@ export async function assignPlayer(formData: FormData) {
     .from("profiles")
     .update({ pair_id: pairId || null })
     .eq("id", playerId);
-  done(error);
+  done(backTo(formData), error ? { error } : { ok: pairId ? "Jugador asignado" : "Jugador quitado de la pareja" });
 }
 
 export async function toggleOrganizer(formData: FormData) {
   const { supabase, profile } = await requireOrganizer();
   const playerId = String(formData.get("player_id"));
-  if (playerId === profile.id) return done({ message: "No puedes quitarte el rol a ti mismo" });
+  const path = `/admin/jugadores/${playerId}`;
+  if (playerId === profile.id) return done(path, { error: { message: "No puedes quitarte el rol a ti mismo" } });
   const makeOrganizer = formData.get("value") === "true";
   const { error } = await supabase
     .from("profiles")
     .update({ is_organizer: makeOrganizer })
     .eq("id", playerId);
-  done(error);
+  done(path, error ? { error } : { ok: makeOrganizer ? "Ahora es organizador" : "Ya no es organizador" });
+}
+
+export async function savePlayerName(formData: FormData) {
+  const { supabase } = await requireOrganizer();
+  const playerId = String(formData.get("player_id"));
+  const fullName = String(formData.get("full_name") ?? "").trim().slice(0, 60);
+  const { error } = await supabase
+    .from("profiles")
+    .update({ full_name: fullName || null })
+    .eq("id", playerId);
+  done(`/admin/jugadores/${playerId}`, error ? { error } : { ok: "Nombre guardado" });
+}
+
+export async function setPlayerEmail(formData: FormData) {
+  const { supabase } = await requireOrganizer();
+  const playerId = String(formData.get("player_id"));
+  const email = String(formData.get("email") ?? "").trim();
+  const { error } = await supabase.rpc("change_email", { target: playerId, new_email: email });
+  done(
+    `/admin/jugadores/${playerId}`,
+    error ? { error } : { ok: `Email cambiado. Desde ahora el jugador entra con ${email.toLowerCase()}.` },
+  );
 }
 
 export async function setPlayerPassword(formData: FormData) {
   const { supabase } = await requireOrganizer();
   const playerId = String(formData.get("player_id"));
   const password = String(formData.get("password") ?? "");
-  if (password.length < 6) return done({ message: "La contraseña debe tener al menos 6 caracteres" });
+  const path = `/admin/jugadores/${playerId}`;
+  if (password.length < 6) return done(path, { error: { message: "La contraseña debe tener al menos 6 caracteres" } });
   const { error } = await supabase.rpc("admin_set_password", {
     target: playerId,
     new_password: password,
   });
-  if (error) return done(error);
-  revalidatePath("/", "layout");
-  redirect(`/admin/parejas?ok=${encodeURIComponent("Contraseña cambiada. Pásasela al jugador para que entre.")}`);
+  done(path, error ? { error } : { ok: "Contraseña cambiada. Pásasela al jugador para que entre." });
 }

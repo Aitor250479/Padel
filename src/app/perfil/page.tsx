@@ -1,7 +1,8 @@
+import ConfirmButton from "@/components/ConfirmButton";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
 import { requireProfile } from "@/lib/session";
-import { saveName, savePassword } from "./actions";
+import { saveEmail, saveName, savePassword } from "./actions";
 
 const input = "mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-black";
 
@@ -35,10 +36,31 @@ export default async function PerfilPage({
               className={input}
             />
           </label>
-          <p className="text-sm opacity-70">Email: {profile.email}</p>
           <button className="rounded-lg bg-emerald-600 px-3 py-2 font-semibold text-white">
             Guardar nombre
           </button>
+        </form>
+
+        <form action={saveEmail} className="mb-8 flex flex-col gap-3">
+          <h2 className="font-semibold">Email de acceso</h2>
+          <p className="text-sm opacity-70">
+            Es el email con el que entras en la web. Si lo cambias, desde ese momento tendrás que
+            entrar con el nuevo.
+          </p>
+          <input
+            type="email"
+            name="email"
+            required
+            defaultValue={profile.email}
+            autoComplete="email"
+            className={input}
+          />
+          <ConfirmButton
+            message="Ojo: a partir de ahora tendrás que entrar en la web con el email nuevo (la contraseña no cambia). ¿Seguro que quieres cambiarlo?"
+            className="rounded-lg bg-emerald-600 px-3 py-2 font-semibold text-white"
+          >
+            Guardar email
+          </ConfirmButton>
         </form>
 
         <form action={savePassword} className="flex flex-col gap-3">
