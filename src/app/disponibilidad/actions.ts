@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { requireProfile } from "@/lib/session";
-import { parseWeek } from "@/lib/weeks";
+import { currentWeek, parseWeek } from "@/lib/weeks";
 
 export async function setAvailability(formData: FormData) {
   const { supabase, profile } = await requireProfile();
   const weekStart = parseWeek(String(formData.get("week_start") ?? ""));
   const value = String(formData.get("can_play"));
+  if (weekStart < currentWeek()) return; // semanas pasadas: no se cambian
 
   if (value === "clear") {
     await supabase

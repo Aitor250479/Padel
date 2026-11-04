@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Header from "@/components/Header";
 import { displayName, requireProfile, type Pair, type Profile } from "@/lib/session";
-import { addDays, formatWeek, parseWeek } from "@/lib/weeks";
+import { addDays, currentWeek, formatWeekLong, parseWeek, weekLabel, weeksFromNow } from "@/lib/weeks";
 import { setAvailability } from "./actions";
 
 type Answer = { profile_id: string; can_play: boolean };
@@ -12,7 +12,11 @@ export default async function DisponibilidadPage({
   searchParams: Promise<{ semana?: string }>;
 }) {
   const { supabase, profile } = await requireProfile();
-  const weekStart = parseWeek((await searchParams).semana);
+  // No se puede ir a semanas pasadas: como mínimo, la semana en curso.
+  const thisWeek = currentWeek();
+  const requested = parseWeek((await searchParams).semana);
+  const weekStart = requested < thisWeek ? thisWeek : requested;
+  const offset = weeksFromNow(weekStart, thisWeek);
 
   const [{ data: pairs }, { data: players }, { data: answers }] = await Promise.all([
     supabase.from("pairs").select("id, name").order("name").returns<Pair[]>(),
@@ -48,24 +52,46 @@ export default async function DisponibilidadPage({
   const available = rows.filter((r) => r.status === "yes").length;
 
   const button = "flex-1 rounded-xl px-4 py-3 text-lg font-semibold";
+  const arrow =
+    "grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 border-lime-400 text-xl font-bold";
 
   return (
     <>
       <Header profile={profile} />
       <main className="mx-auto max-w-xl px-4 py-6">
-        <h1 className="mb-1 text-2xl font-bold">Disponibilidad</h1>
-        <div className="mb-5 flex items-center gap-3 text-sm">
-          <Link href={`/disponibilidad?semana=${addDays(weekStart, -7)}`} className="underline">
-            ← Anterior
-          </Link>
-          <span className="font-semibold">Semana del {formatWeek(weekStart)}</span>
-          <Link href={`/disponibilidad?semana=${addDays(weekStart, 7)}`} className="underline">
-            Siguiente →
-          </Link>
-        </div>
+        <h1 className="mb-4 text-2xl font-bold">Disponibilidad</h1>
 
         <section className="mb-6 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
-          <p className="mb-3 font-semibold">¿Puedes jugar esta semana?</p>
+          <div className="mb-4 flex items-center gap-2">
+            {offset > 0 ? (
+              <Link
+                href={`/disponibilidad?semana=${addDays(weekStart, -7)}`}
+                aria-label="Semana anterior"
+                className={`${arrow} hover:bg-lime-100 dark:hover:bg-lime-950`}
+              >
+                ‹
+              </Link>
+            ) : (
+              <span aria-hidden className={`${arrow} cursor-not-allowed opacity-25`}>
+                ‹
+              </span>
+            )}
+            <div className="flex-1 text-center">
+              <span className="inline-block rounded-full bg-lime-400 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-neutral-950">
+                {weekLabel(offset)}
+              </span>
+              <p className="mt-1 font-semibold leading-snug">
+                ¿Puedes jugar la semana del {formatWeekLong(weekStart)}?
+              </p>
+            </div>
+            <Link
+              href={`/disponibilidad?semana=${addDays(weekStart, 7)}`}
+              aria-label="Semana siguiente"
+              className={`${arrow} hover:bg-lime-100 dark:hover:bg-lime-950`}
+            >
+              ›
+            </Link>
+          </div>
           <form action={setAvailability} className="flex gap-3">
             <input type="hidden" name="week_start" value={weekStart} />
             <button
