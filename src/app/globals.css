@@ -24,18 +24,14 @@ body {
 }
 
 /* Pantalla de carga */
-@keyframes loading-bar {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(300%); }
+@keyframes loading-logo {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.06) rotate(-4deg); }
+  50% { transform: scale(1) rotate(0deg); }
+  75% { transform: scale(1.06) rotate(4deg); }
 }
-.loading-bar { animation: loading-bar 1s ease-in-out infinite; }
-
-@keyframes loading-ball {
-  0%, 100% { transform: translateY(0); animation-timing-function: cubic-bezier(0.3, 0, 0.7, 0.5); }
-  50% { transform: translateY(-28px); animation-timing-function: cubic-bezier(0.3, 0.5, 0.7, 1); }
-}
-.loading-ball { animation: loading-ball 0.7s infinite; }
+.loading-logo { animation: loading-logo 1.2s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-  .loading-bar, .loading-ball { animation-duration: 2.5s; }
+  .loading-logo { animation-duration: 3s; }
 }
