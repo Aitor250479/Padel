@@ -14,15 +14,16 @@ export type Pair = { id: string; name: string };
 /** Usuario conectado y su perfil. Redirige a /login si no hay sesión. */
 export async function requireProfile() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  // La sesión ya se ha validado en el middleware; aquí basta con leer el
+  // token (validación local, sin viaje a Supabase si hay claves asimétricas).
+  const { data } = await supabase.auth.getClaims();
+  const userId = data?.claims?.sub;
+  if (!userId) redirect("/login");
 
   const { data: profile } = await supabase
     .from("profiles")
     .select("id, email, full_name, is_organizer, pair_id")
-    .eq("id", user.id)
+    .eq("id", userId)
     .single<Profile>();
   if (!profile) redirect("/login");
 
