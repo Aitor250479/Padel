@@ -15,7 +15,7 @@ import {
 } from "@/lib/matches";
 import { currentLeague, onlyLeague } from "@/lib/leagues";
 import { requireProfile } from "@/lib/session";
-import { addDays, formatWeek, nowInSpain, parseWeek } from "@/lib/weeks";
+import { addDays, currentWeek, formatWeek, nowInSpain, parseWeek, weekLabel, weeksFromNow } from "@/lib/weeks";
 import { confirmResultAsOrganizer, createMatch, generatePairings } from "./actions";
 import { RESULT_OPTIONS } from "@/lib/standings";
 
@@ -28,7 +28,10 @@ export default async function PartidosPage({
 }) {
   const { supabase, profile } = await requireProfile();
   const params = await searchParams;
-  const weekStart = parseWeek(params.semana);
+  // Por defecto, la semana en curso (hasta el domingo), para que el fin de
+  // semana se vean los partidos que se están jugando.
+  const thisWeek = currentWeek();
+  const weekStart = parseWeek(params.semana, thisWeek);
   const now = nowInSpain();
 
   const league = await currentLeague(supabase);
@@ -85,7 +88,12 @@ export default async function PartidosPage({
           <Link href={`/partidos?semana=${addDays(weekStart, -7)}`} className="underline">
             ← Anterior
           </Link>
-          <span className="font-semibold">Semana del {formatWeek(weekStart)}</span>
+          <span className="text-center">
+            <span className="inline-block rounded-full bg-lime-400 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-neutral-950">
+              {weekLabel(weeksFromNow(weekStart, thisWeek))}
+            </span>{" "}
+            <span className="font-semibold">Semana del {formatWeek(weekStart)}</span>
+          </span>
           <Link href={`/partidos?semana=${addDays(weekStart, 7)}`} className="underline">
             Siguiente →
           </Link>
