@@ -1,3 +1,4 @@
+import SubmitButton from "@/components/SubmitButton";
 import { randomInt, randomUUID } from "node:crypto";
 import Link from "next/link";
 import ConfirmButton from "@/components/ConfirmButton";
@@ -104,7 +105,7 @@ export default async function SorteoPage({
                     ✅ Confirmar parejas
                   </ConfirmButton>
                 ) : (
-                  <button className={button}>✅ Confirmar parejas</button>
+                  <SubmitButton className={button}>✅ Confirmar parejas</SubmitButton>
                 )}
               </form>
               <Link

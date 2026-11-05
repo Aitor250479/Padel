@@ -1,3 +1,4 @@
+import SubmitButton from "@/components/SubmitButton";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
@@ -103,9 +104,9 @@ export default async function MatchPage({
                   defaultValue={match.booking_at?.slice(0, 16) ?? ""}
                   className={input}
                 />
-                <button className="self-start rounded-lg bg-emerald-600 px-3 py-1 text-sm font-semibold text-white">
+                <SubmitButton className="self-start rounded-lg bg-emerald-600 px-3 py-1 text-sm font-semibold text-white">
                   Guardar
-                </button>
+                </SubmitButton>
               </form>
             )}
           </section>
@@ -154,9 +155,9 @@ export default async function MatchPage({
                       value={`${otherProposal.sets_a}-${otherProposal.sets_b}`}
                     />
                     <input type="hidden" name="score_detail" value={otherProposal.score_detail ?? ""} />
-                    <button className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white">
+                    <SubmitButton className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white">
                       ✅ Confirmar {otherProposal.sets_a}-{otherProposal.sets_b}
-                    </button>
+                    </SubmitButton>
                     <p className="mt-1 text-xs opacity-70">
                       Si no estáis de acuerdo, poned abajo el resultado correcto.
                     </p>
@@ -213,14 +214,14 @@ export default async function MatchPage({
                   <option value="cancelado">Cancelado</option>
                 </select>
               </label>
-              <button className="self-start rounded-lg bg-gray-800 px-3 py-1 font-semibold text-white">
+              <SubmitButton className="self-start rounded-lg bg-gray-800 px-3 py-1 font-semibold text-white">
                 Guardar cambios
-              </button>
+              </SubmitButton>
             </form>
             <form action={deleteMatch} className="mt-3">
               <input type="hidden" name="id" value={match.id} />
               <input type="hidden" name="week_start" value={match.week_start} />
-              <button className="text-sm text-red-600 underline">Borrar partido</button>
+              <SubmitButton pendingText="Borrando…" className="text-sm text-red-600 underline">Borrar partido</SubmitButton>
             </form>
           </section>
         )}
@@ -267,13 +268,13 @@ function ResultForm({
         className={input}
       />
       <div className="flex gap-3">
-        <button className="rounded-lg bg-emerald-600 px-3 py-1 font-semibold text-white">
+        <SubmitButton className="rounded-lg bg-emerald-600 px-3 py-1 font-semibold text-white">
           Guardar resultado
-        </button>
+        </SubmitButton>
         {current && (
-          <button name="clear" value="1" className="text-red-600 underline">
+          <SubmitButton name="clear" value="1" pendingText="Borrando…" className="text-red-600 underline">
             Borrar
-          </button>
+          </SubmitButton>
         )}
       </div>
     </form>

@@ -1,3 +1,4 @@
+import SubmitButton from "@/components/SubmitButton";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
 import { requireOrganizer } from "@/lib/session";
@@ -59,9 +60,9 @@ export default async function BienvenidaPage({
               placeholder="Escribe aquí el texto de bienvenida"
             />
           </label>
-          <button className="self-start rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white">
+          <SubmitButton className="self-start rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white">
             Guardar
-          </button>
+          </SubmitButton>
         </form>
       </main>
     </>

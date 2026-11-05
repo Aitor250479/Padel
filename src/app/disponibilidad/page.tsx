@@ -1,3 +1,4 @@
+import SubmitButton from "@/components/SubmitButton";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { displayName, requireProfile, type Pair, type Profile } from "@/lib/session";
@@ -94,20 +95,20 @@ export default async function DisponibilidadPage({
           </div>
           <form action={setAvailability} className="flex gap-3">
             <input type="hidden" name="week_start" value={weekStart} />
-            <button
+            <SubmitButton
               name="can_play"
               value="yes"
               className={`${button} ${mine === true ? "bg-emerald-600 text-white" : "border border-emerald-600 text-emerald-700 dark:text-emerald-400"}`}
             >
               ✅ Sí puedo
-            </button>
-            <button
+            </SubmitButton>
+            <SubmitButton
               name="can_play"
               value="no"
               className={`${button} ${mine === false ? "bg-red-600 text-white" : "border border-red-600 text-red-700 dark:text-red-400"}`}
             >
               ❌ No puedo
-            </button>
+            </SubmitButton>
           </form>
           <p className="mt-2 text-sm opacity-70">
             {mine === undefined
