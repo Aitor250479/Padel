@@ -1,3 +1,4 @@
+import SubmitButton from "@/components/SubmitButton";
 import Link from "next/link";
 import ConfirmButton from "@/components/ConfirmButton";
 import Header from "@/components/Header";
@@ -98,9 +99,9 @@ export default async function ClasificacionPage({
               <form action={renameLeague} className="flex flex-wrap gap-2">
                 <input type="hidden" name="id" value={current.id} />
                 <input name="name" required defaultValue={current.name} className={input} />
-                <button className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">
+                <SubmitButton className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">
                   Guardar
-                </button>
+                </SubmitButton>
               </form>
             </div>
 

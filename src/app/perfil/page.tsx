@@ -1,3 +1,4 @@
+import SubmitButton from "@/components/SubmitButton";
 import ConfirmButton from "@/components/ConfirmButton";
 import Link from "next/link";
 import Header from "@/components/Header";
@@ -44,9 +45,9 @@ export default async function PerfilPage({
               className={input}
             />
           </label>
-          <button className="rounded-lg bg-emerald-600 px-3 py-2 font-semibold text-white">
+          <SubmitButton className="rounded-lg bg-emerald-600 px-3 py-2 font-semibold text-white">
             Guardar nombre
-          </button>
+          </SubmitButton>
         </form>
 
         <form action={saveEmail} className="mb-8 flex flex-col gap-3">
@@ -94,9 +95,9 @@ export default async function PerfilPage({
             autoComplete="new-password"
             className={input}
           />
-          <button className="rounded-lg bg-gray-800 px-3 py-2 font-semibold text-white">
+          <SubmitButton className="rounded-lg bg-gray-800 px-3 py-2 font-semibold text-white">
             Guardar contraseña
-          </button>
+          </SubmitButton>
         </form>
       </main>
     </>

@@ -1,3 +1,4 @@
+import SubmitButton from "@/components/SubmitButton";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
@@ -62,7 +63,7 @@ export default async function ParejasPage({
             </summary>
             <form action={createPair} className="mt-2 flex gap-2">
               <input name="name" required placeholder="Nombre de la pareja" className={`${input} flex-1`} />
-              <button className={button}>Crear</button>
+              <SubmitButton pendingText="Creando…" className={button}>Crear</SubmitButton>
             </form>
           </details>
         </section>

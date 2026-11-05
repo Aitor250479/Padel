@@ -1,3 +1,4 @@
+import SubmitButton from "@/components/SubmitButton";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ConfirmButton from "@/components/ConfirmButton";
@@ -80,7 +81,7 @@ export default async function PlayerPage({
                 placeholder="Nombre y apellido"
                 className={`${input} flex-1`}
               />
-              <button className={button}>Guardar</button>
+              <SubmitButton className={button}>Guardar</SubmitButton>
             </form>
           </section>
 
@@ -120,7 +121,7 @@ export default async function PlayerPage({
                   </option>
                 ))}
               </select>
-              <button className={button}>Guardar</button>
+              <SubmitButton className={button}>Guardar</SubmitButton>
             </form>
           </section>
 
@@ -140,7 +141,7 @@ export default async function PlayerPage({
                 placeholder="Nueva contraseña (mín. 6)"
                 className={`${input} min-w-0 flex-1`}
               />
-              <button className={button}>Guardar</button>
+              <SubmitButton className={button}>Guardar</SubmitButton>
             </form>
           </section>
 
@@ -153,9 +154,9 @@ export default async function PlayerPage({
               <form action={toggleOrganizer}>
                 <input type="hidden" name="player_id" value={player.id} />
                 <input type="hidden" name="value" value={String(!player.is_organizer)} />
-                <button className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold">
+                <SubmitButton className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold">
                   {player.is_organizer ? "Quitar organizador" : "Hacer organizador"}
-                </button>
+                </SubmitButton>
               </form>
             </section>
           )}

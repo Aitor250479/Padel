@@ -1,3 +1,4 @@
+import SubmitButton from "@/components/SubmitButton";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
@@ -198,9 +199,9 @@ export default async function PartidosPage({
                           <span className="flex-1">
                             {pairName(p.pair_id)} puso: <b>{proposalText(m, p)}</b>
                           </span>
-                          <button className="rounded-lg bg-emerald-600 px-3 py-1 font-semibold text-white">
+                          <SubmitButton className="rounded-lg bg-emerald-600 px-3 py-1 font-semibold text-white">
                             Confirmar este
-                          </button>
+                          </SubmitButton>
                         </form>
                       ))}
                       <details className="mt-2">
@@ -221,9 +222,9 @@ export default async function PartidosPage({
                             ))}
                           </select>
                           <input name="score_detail" placeholder="Juegos (ej.: 6-4 3-6 7-5)" className={input} />
-                          <button className="rounded-lg bg-gray-800 px-3 py-1 font-semibold text-white">
+                          <SubmitButton className="rounded-lg bg-gray-800 px-3 py-1 font-semibold text-white">
                             Confirmar
-                          </button>
+                          </SubmitButton>
                         </form>
                       </details>
                     </li>
@@ -239,9 +240,9 @@ export default async function PartidosPage({
             <h2 className="mb-2 font-semibold">Organizador · Emparejamientos</h2>
             <form action={generatePairings} className="mb-2">
               <input type="hidden" name="week_start" value={weekStart} />
-              <button className="rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white">
+              <SubmitButton pendingText="Generando…" className="rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white">
                 Generar emparejamientos
-              </button>
+              </SubmitButton>
             </form>
             <p className="mb-4 text-xs opacity-70">
               Empareja al azar a las parejas sin partido en las que los dos jugadores pueden jugar
@@ -266,9 +267,9 @@ export default async function PartidosPage({
                   ))}
                 </select>
               ))}
-              <button className="rounded-lg bg-gray-800 px-3 py-1 text-sm font-semibold text-white">
+              <SubmitButton pendingText="Creando…" className="rounded-lg bg-gray-800 px-3 py-1 text-sm font-semibold text-white">
                 Crear
-              </button>
+              </SubmitButton>
             </form>
           </section>
         )}

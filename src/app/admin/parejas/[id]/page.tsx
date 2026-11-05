@@ -1,3 +1,4 @@
+import SubmitButton from "@/components/SubmitButton";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ConfirmButton from "@/components/ConfirmButton";
@@ -79,7 +80,7 @@ export default async function PairPage({
                     </option>
                   ))}
                 </select>
-                <button className={button}>Añadir</button>
+                <SubmitButton className={button}>Añadir</SubmitButton>
               </form>
             ) : (
               <p className="text-sm opacity-70">No hay jugadores sin pareja para añadir.</p>
@@ -91,7 +92,7 @@ export default async function PairPage({
           <form action={renamePair} className="flex gap-2">
             <input type="hidden" name="id" value={pair.id} />
             <input name="name" defaultValue={pair.name} required className={`${input} flex-1`} />
-            <button className={button}>Renombrar</button>
+            <SubmitButton className={button}>Renombrar</SubmitButton>
           </form>
         </section>
 
@@ -103,6 +104,7 @@ export default async function PairPage({
           <form action={deletePair}>
             <input type="hidden" name="id" value={pair.id} />
             <ConfirmButton
+              pendingText="Borrando…"
               message={`¿Seguro que quieres borrar la pareja "${pair.name}"? Se borrarán también sus partidos y resultados.`}
               className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white"
             >
