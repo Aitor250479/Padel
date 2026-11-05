@@ -12,6 +12,7 @@ import {
   type Match,
   type ProposedResult,
 } from "@/lib/matches";
+import { currentLeague, onlyLeague } from "@/lib/leagues";
 import { requireProfile } from "@/lib/session";
 import { addDays, formatWeek, nowInSpain, parseWeek } from "@/lib/weeks";
 import { confirmResultAsOrganizer, createMatch, generatePairings } from "./actions";
@@ -29,12 +30,10 @@ export default async function PartidosPage({
   const weekStart = parseWeek(params.semana);
   const now = nowInSpain();
 
+  const league = await currentLeague(supabase);
   const [{ pairs, pairName, playersOf }, { data: matches }, available] = await Promise.all([
     loadPairDirectory(supabase),
-    supabase
-      .from("matches")
-      .select(MATCH_COLUMNS)
-      .eq("week_start", weekStart)
+    onlyLeague(supabase.from("matches").select(MATCH_COLUMNS).eq("week_start", weekStart), league)
       .order("booking_at", { nullsFirst: false })
       .returns<Match[]>(),
     availablePairIds(supabase, weekStart),
@@ -52,11 +51,10 @@ export default async function PartidosPage({
   let pending: Match[] = [];
   let pendingProposals: ProposedResult[] = [];
   if (profile.is_organizer) {
-    const { data: open } = await supabase
-      .from("matches")
-      .select(MATCH_COLUMNS)
-      .is("sets_a", null)
-      .neq("status", "cancelado")
+    const { data: open } = await onlyLeague(
+      supabase.from("matches").select(MATCH_COLUMNS).is("sets_a", null).neq("status", "cancelado"),
+      league,
+    )
       .order("week_start")
       .returns<Match[]>();
     pending = (open ?? []).filter((m) => resultOpen(m, now));

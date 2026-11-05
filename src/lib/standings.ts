@@ -17,7 +17,10 @@ export type Standing = {
   points: number;
 };
 
-/** Clasificación: 1 punto por set ganado. Orden: puntos, ganados, diferencia de sets. */
+/**
+ * Clasificación: 1 punto por set ganado y 1 extra por ganar sin ceder set (2-0 = 3).
+ * Orden: puntos, ganados, diferencia de sets.
+ */
 export function computeStandings(pairIds: string[], matches: ResultRow[]): Standing[] {
   const table = new Map<string, Standing>(
     pairIds.map((id) => [
@@ -38,7 +41,7 @@ export function computeStandings(pairIds: string[], matches: ResultRow[]): Stand
       row.played++;
       row.setsFor += mine;
       row.setsAgainst += theirs;
-      row.points += mine;
+      row.points += mine + (mine === 2 && theirs === 0 ? 1 : 0);
       if (mine > theirs) row.won++;
       else if (mine < theirs) row.lost++;
       else row.drawn++;
