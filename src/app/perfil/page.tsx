@@ -1,4 +1,5 @@
 import ConfirmButton from "@/components/ConfirmButton";
+import Link from "next/link";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
 import { requireProfile } from "@/lib/session";
@@ -20,6 +21,13 @@ export default async function PerfilPage({
       <main className="mx-auto max-w-md px-4 py-6">
         <h1 className="mb-4 text-2xl font-bold">Mi perfil</h1>
         <Notice ok={params.ok} error={params.error} />
+        <Link
+          href={`/jugadores/${profile.id}/estadisticas`}
+          className="mb-6 flex items-center justify-between rounded-xl bg-neutral-950 p-4 font-semibold text-white hover:bg-neutral-800"
+        >
+          <span>📊 Estadísticas de juego</span>
+          <span aria-hidden className="text-lime-400">›</span>
+        </Link>
         {params.nueva && (
           <p className="mb-4 rounded-lg bg-amber-100 p-3 text-sm text-amber-900">
             Crea aquí abajo tu nueva contraseña.
