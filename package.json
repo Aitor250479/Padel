@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --no-warnings tests/pairing.test.ts && node --experimental-strip-types --no-warnings tests/standings.test.ts && node --experimental-strip-types --no-warnings tests/weeks.test.ts && node --experimental-strip-types --no-warnings tests/player-stats.test.ts && node --experimental-strip-types --no-warnings tests/share.test.ts && node --experimental-strip-types --no-warnings tests/errors.test.ts"
+    "test": "node --experimental-strip-types --no-warnings tests/pairing.test.ts && node --experimental-strip-types --no-warnings tests/standings.test.ts && node --experimental-strip-types --no-warnings tests/weeks.test.ts && node --experimental-strip-types --no-warnings tests/player-stats.test.ts && node --experimental-strip-types --no-warnings tests/share.test.ts && node --experimental-strip-types --no-warnings tests/errors.test.ts && node --experimental-strip-types --no-warnings tests/todo.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
