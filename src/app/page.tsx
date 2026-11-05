@@ -1,24 +1,83 @@
 import Link from "next/link";
 import Header from "@/components/Header";
+import Scoreboard from "@/components/Scoreboard";
+import { loadPairDirectory } from "@/lib/matches";
 import { requireProfile } from "@/lib/session";
-import { WELCOME_KEY } from "@/lib/welcome";
+import { HOME_MODE_KEY, WELCOME_KEY } from "@/lib/welcome";
+import { formatWeekLong } from "@/lib/weeks";
+
+type News = {
+  id: string;
+  week_start: string;
+  pair_a: string;
+  pair_b: string;
+  sets_a: number;
+  sets_b: number;
+  score_detail: string | null;
+};
 
 export default async function Home() {
   const { supabase, profile } = await requireProfile();
-  const { data } = await supabase
+  const { data: texts } = await supabase
     .from("site_texts")
-    .select("body")
-    .eq("key", WELCOME_KEY)
-    .maybeSingle<{ body: string }>();
-  const text = data?.body?.trim() || "¡Bienvenidos al Torneo Pádel Loyola! 🎾";
+    .select("key, body")
+    .in("key", [WELCOME_KEY, HOME_MODE_KEY])
+    .returns<{ key: string; body: string }[]>();
+  const showNews = texts?.find((t) => t.key === HOME_MODE_KEY)?.body === "noticias";
+  const text =
+    texts?.find((t) => t.key === WELCOME_KEY)?.body?.trim() || "¡Bienvenidos al Torneo Pádel Loyola! 🎾";
+
+  let news: News[] = [];
+  let directory: Awaited<ReturnType<typeof loadPairDirectory>> | null = null;
+  if (showNews) {
+    const [{ data }, dir] = await Promise.all([
+      supabase
+        .from("matches")
+        .select("id, week_start, pair_a, pair_b, sets_a, sets_b, score_detail")
+        .not("sets_a", "is", null)
+        .neq("status", "cancelado")
+        .order("result_at", { ascending: false, nullsFirst: false })
+        .order("week_start", { ascending: false })
+        .limit(5)
+        .returns<News[]>(),
+      loadPairDirectory(supabase),
+    ]);
+    news = data ?? [];
+    directory = dir;
+  }
 
   return (
     <>
       <Header profile={profile} />
       <main className="mx-auto max-w-3xl px-4 py-6">
-        <section className="whitespace-pre-line rounded-2xl border-l-4 border-lime-400 bg-neutral-50 p-5 text-lg leading-relaxed shadow-sm dark:bg-neutral-900">
-          {text}
-        </section>
+        {showNews && directory ? (
+          <section>
+            <h1 className="mb-4 text-center text-2xl font-black uppercase italic tracking-tight">
+              📰 Últimos resultados
+            </h1>
+            {news.length ? (
+              <div className="flex flex-col gap-6">
+                {news.map((m) => (
+                  <Scoreboard
+                    key={m.id}
+                    caption={`Semana del ${formatWeekLong(m.week_start)}`}
+                    detail={m.score_detail}
+                    a={{ name: directory.pairName(m.pair_a), players: directory.playersOf(m.pair_a), sets: m.sets_a }}
+                    b={{ name: directory.pairName(m.pair_b), players: directory.playersOf(m.pair_b), sets: m.sets_b }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="rounded-2xl bg-neutral-50 p-5 text-center dark:bg-neutral-900">
+                Todavía no hay resultados confirmados. ¡A jugar! 🎾
+              </p>
+            )}
+          </section>
+        ) : (
+          <section className="whitespace-pre-line rounded-2xl border-l-4 border-lime-400 bg-neutral-50 p-5 text-lg leading-relaxed shadow-sm dark:bg-neutral-900">
+            {text}
+          </section>
+        )}
 
         {(!profile.pair_id || !profile.full_name) && (
           <div className="mt-4 flex flex-col gap-1 text-sm opacity-80">

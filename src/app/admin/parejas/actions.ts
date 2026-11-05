@@ -102,3 +102,50 @@ export async function setPlayerPassword(formData: FormData) {
   });
   done(path, error ? { error } : { ok: "Contraseña cambiada. Pásasela al jugador para que entre." });
 }
+
+/** Guarda las parejas sorteadas en /admin/parejas/sorteo. */
+export async function applyRandomPairs(formData: FormData) {
+  const { supabase } = await requireOrganizer();
+  const all = formData.get("modo") === "todos";
+  const retry = `/admin/parejas/sorteo?modo=${all ? "todos" : "sin"}`;
+  const groups = formData.getAll("grupo").map((g) => {
+    const [a, b, ...name] = String(g).split(",");
+    return { a, b, name: name.join(",").trim() };
+  });
+
+  const ids = groups.flatMap((g) => [g.a, g.b]);
+  if (!groups.length || new Set(ids).size !== ids.length || groups.some((g) => !g.name)) {
+    return done(retry, { error: { message: "Sorteo no válido, vuelve a intentarlo" } });
+  }
+
+  const [{ data: pairs }, { data: players }] = await Promise.all([
+    supabase.from("pairs").select("id, name"),
+    supabase.from("profiles").select("id, pair_id").in("id", ids),
+  ]);
+  if ((players ?? []).length !== ids.length) {
+    return done(retry, { error: { message: "Algún jugador ya no existe, vuelve a sortear" } });
+  }
+  if (!all && (players ?? []).some((p) => p.pair_id)) {
+    return done(retry, { error: { message: "Algún jugador ya tiene pareja, vuelve a sortear" } });
+  }
+
+  if (all) {
+    const { error } = await supabase.from("profiles").update({ pair_id: null }).not("pair_id", "is", null);
+    if (error) return done(retry, { error });
+  }
+
+  for (const g of groups) {
+    let pairId = (pairs ?? []).find((p) => p.name === g.name)?.id as string | undefined;
+    if (!pairId) {
+      const { data, error } = await supabase.from("pairs").insert({ name: g.name }).select("id").single();
+      if (error || !data) return done(retry, { error });
+      pairId = data.id as string;
+    }
+    const { error } = await supabase.from("profiles").update({ pair_id: pairId }).in("id", [g.a, g.b]);
+    if (error) return done(retry, { error });
+  }
+
+  done("/admin/parejas", {
+    ok: `${groups.length} parejas formadas al azar. Puedes cambiarles el nombre entrando en cada una.`,
+  });
+}

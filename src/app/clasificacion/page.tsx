@@ -1,10 +1,18 @@
+import ConfirmButton from "@/components/ConfirmButton";
 import Header from "@/components/Header";
+import Notice from "@/components/Notice";
 import { loadPairDirectory } from "@/lib/matches";
 import { requireProfile } from "@/lib/session";
 import { computeStandings, type ResultRow } from "@/lib/standings";
+import { resetLeague } from "./actions";
 
-export default async function ClasificacionPage() {
+export default async function ClasificacionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ok?: string; error?: string }>;
+}) {
   const { supabase, profile } = await requireProfile();
+  const { ok, error } = await searchParams;
   const [{ pairs, pairName }, { data: matches }] = await Promise.all([
     loadPairDirectory(supabase),
     supabase
@@ -23,6 +31,7 @@ export default async function ClasificacionPage() {
       <Header profile={profile} />
       <main className="mx-auto max-w-3xl px-4 py-6">
         <h1 className="mb-4 text-2xl font-bold">Clasificación</h1>
+        <Notice ok={ok} error={error} />
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -74,6 +83,33 @@ export default async function ClasificacionPage() {
           </ul>
           <p>A igualdad de puntos, desempatan los partidos ganados y luego la diferencia de sets.</p>
         </div>
+
+        {profile.is_organizer && (
+          <section className="mt-8 rounded-xl border border-red-200 p-4 dark:border-red-900">
+            <h2 className="mb-1 font-semibold text-red-700 dark:text-red-400">
+              Organizador · Reiniciar la liga
+            </h2>
+            <p className="mb-3 text-sm opacity-70">
+              Borra todos los partidos y resultados para empezar de cero. Las parejas, los jugadores
+              y la disponibilidad se mantienen. No se puede deshacer.
+            </p>
+            <form action={resetLeague} className="flex flex-wrap gap-2">
+              <input
+                name="confirm"
+                required
+                autoComplete="off"
+                placeholder="Escribe REINICIAR"
+                className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-black"
+              />
+              <ConfirmButton
+                message="Se borrarán TODOS los partidos y resultados de la liga. ¿Seguro que quieres reiniciarla?"
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white"
+              >
+                Reiniciar liga
+              </ConfirmButton>
+            </form>
+          </section>
+        )}
       </main>
     </>
   );

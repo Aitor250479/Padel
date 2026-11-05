@@ -169,3 +169,49 @@ export async function saveResult(formData: FormData) {
   );
   back(`/partidos/${id}`, error ? { error: error.message } : { ok: "Resultado guardado." });
 }
+
+/** El organizador da por bueno el resultado que puso una de las parejas (o fija uno). */
+export async function confirmResultAsOrganizer(formData: FormData) {
+  const { supabase } = await requireOrganizer();
+  const id = String(formData.get("id"));
+  const week = String(formData.get("week") ?? "");
+  const path = "/partidos";
+  const extra: Record<string, string> = week ? { semana: week } : {};
+
+  const { data: match } = await supabase
+    .from("matches")
+    .select(MATCH_COLUMNS)
+    .eq("id", id)
+    .maybeSingle<Match>();
+  if (!match) return back(path, { ...extra, error: "Partido no encontrado" });
+
+  const fromPair = String(formData.get("from_pair") ?? "");
+  let a: number, b: number, detail: string | null;
+  if (fromPair) {
+    const { data: p } = await supabase
+      .from("match_results")
+      .select("sets_a, sets_b, score_detail")
+      .eq("match_id", id)
+      .eq("pair_id", fromPair)
+      .maybeSingle<{ sets_a: number; sets_b: number; score_detail: string | null }>();
+    if (!p) return back(path, { ...extra, error: "Ese resultado ya no existe" });
+    ({ sets_a: a, sets_b: b, score_detail: detail } = p);
+  } else {
+    const option = RESULT_OPTIONS.find((o) => o.value === String(formData.get("result") ?? ""));
+    if (!option) return back(path, { ...extra, error: "Elige un resultado" });
+    a = option.a;
+    b = option.b;
+    detail = String(formData.get("score_detail") ?? "").trim().slice(0, 60) || null;
+  }
+
+  const { error } = await supabase.from("match_results").upsert(
+    [match.pair_a, match.pair_b].map((pairId) => ({
+      match_id: id,
+      pair_id: pairId,
+      sets_a: a,
+      sets_b: b,
+      score_detail: detail,
+    })),
+  );
+  back(path, error ? { ...extra, error: error.message } : { ...extra, ok: "Resultado confirmado por el organizador." });
+}
