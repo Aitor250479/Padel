@@ -19,7 +19,7 @@ export default function ErrorPage({
       <Image src="/perdedor.png" alt="" width={140} height={140} className="h-36 w-36 object-contain" />
       <h1 className="text-xl font-black">¡Bola a la red! Algo ha fallado</h1>
       <p className="text-sm opacity-70">
-        Lo que estabas guardando seguramente se ha guardado. Prueba a recargar.
+        Puede que lo que estabas guardando no se haya guardado. Recarga la página y compruébalo.
       </p>
       <div className="flex flex-wrap justify-center gap-2">
         <button
