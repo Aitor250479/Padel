@@ -6,7 +6,7 @@ export default function Footer() {
           © Torneo Pádel Loyola · Términos y condiciones de uso
         </summary>
         <p className="mt-2 leading-relaxed">
-          Esta web la ha programado Aitor en sus ratos libres, sin ánimo de lucro y para uso
+          Esta web la ha programado Aitor, con ayuda de su amigo Claudio, en sus ratos libres, sin ánimo de lucro y para uso
           exclusivo del grupo de padres que jugamos estos partidos entre amigos. Al usarla aceptas
           que: (1) los resultados se introducen con honestidad, aunque duela; (2) la organización
           no se hace responsable de lesiones de rodilla, egos heridos ni discusiones sobre si la
