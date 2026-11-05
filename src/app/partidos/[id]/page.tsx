@@ -3,6 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
+import WhatsAppLink from "@/components/WhatsAppLink";
+import { matchMessage } from "@/lib/share";
+import { siteUrl } from "@/lib/site-url";
 import {
   MATCH_COLUMNS,
   PROPOSED_COLUMNS,
@@ -15,7 +18,7 @@ import {
 } from "@/lib/matches";
 import { requireProfile } from "@/lib/session";
 import { RESULT_OPTIONS } from "@/lib/standings";
-import { formatWeek, nowInSpain } from "@/lib/weeks";
+import { formatWeek, formatWeekLong, nowInSpain } from "@/lib/weeks";
 import { deleteMatch, saveBooking, saveResult, updateMatch } from "../actions";
 
 const input = "rounded-lg border border-gray-300 px-2 py-1 text-black";
@@ -88,6 +91,13 @@ export default async function MatchPage({
                 ⚠️ Recordad reservar pista y apuntar aquí el lugar, la fecha y la hora para que lo
                 vean todos.
               </p>
+            )}
+            {isPlayer && (
+              <div className="mt-3">
+                <WhatsAppLink text={matchMessage(match, myPair, { pairName, playersOf, formatBooking, formatWeekLong }, await siteUrl())}>
+                  {booking ? "Mandar lugar y hora por WhatsApp" : "Hablar con el rival por WhatsApp"}
+                </WhatsAppLink>
+              </div>
             )}
             {canEdit && (
               <form action={saveBooking} className="mt-3 flex flex-col gap-2">
