@@ -39,10 +39,13 @@ export function defaultWeek() {
   return dow >= 4 ? addDays(mondayOf(today), 7) : mondayOf(today);
 }
 
-/** Valida el parámetro ?semana= y lo normaliza al lunes. */
-export function parseWeek(param: string | undefined) {
+/**
+ * Valida el parámetro ?semana= y lo normaliza al lunes.
+ * Si no viene, usa `fallback` (por defecto, defaultWeek()).
+ */
+export function parseWeek(param: string | undefined, fallback?: string) {
   if (param && ISO.test(param) && !Number.isNaN(toDate(param).getTime())) return mondayOf(param);
-  return defaultWeek();
+  return fallback ?? defaultWeek();
 }
 
 export function weekDays(weekStart: string) {
