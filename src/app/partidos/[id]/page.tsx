@@ -1,4 +1,5 @@
 import SubmitButton from "@/components/SubmitButton";
+import ConfirmButton from "@/components/ConfirmButton";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
@@ -231,7 +232,13 @@ export default async function MatchPage({
             <form action={deleteMatch} className="mt-3">
               <input type="hidden" name="id" value={match.id} />
               <input type="hidden" name="week_start" value={match.week_start} />
-              <SubmitButton pendingText="Borrando…" className="text-sm text-red-600 underline">Borrar partido</SubmitButton>
+              <ConfirmButton
+                message="¿Seguro que quieres borrar este partido? Se borrarán también sus resultados."
+                pendingText="Borrando…"
+                className="text-sm text-red-600 underline"
+              >
+                Borrar partido
+              </ConfirmButton>
             </form>
           </section>
         )}
@@ -282,9 +289,12 @@ function ResultForm({
           Guardar resultado
         </SubmitButton>
         {current && (
-          <SubmitButton name="clear" value="1" pendingText="Borrando…" className="text-red-600 underline">
+          <ConfirmButton
+            message="¿Seguro que quieres borrar el resultado?"
+            name="clear"
+            value="1" pendingText="Borrando…" className="text-red-600 underline">
             Borrar
-          </SubmitButton>
+          </ConfirmButton>
         )}
       </div>
     </form>

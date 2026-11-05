@@ -1,5 +1,6 @@
 "use server";
 
+import { friendlyError } from "@/lib/errors";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireProfile } from "@/lib/session";
@@ -7,8 +8,10 @@ import { requireProfile } from "@/lib/session";
 export async function saveName(formData: FormData) {
   const { supabase, profile } = await requireProfile();
   const fullName = String(formData.get("full_name") ?? "").trim().slice(0, 60);
-  await supabase.from("profiles").update({ full_name: fullName || null }).eq("id", profile.id);
+  const { error } = await supabase.from("profiles").update({ full_name: fullName || null }).eq("id", profile.id);
+  if (error) redirect(`/perfil?error=${encodeURIComponent(friendlyError(error.message))}`);
   revalidatePath("/", "layout");
+  redirect(`/perfil?ok=${encodeURIComponent("Nombre guardado.")}`);
 }
 
 export async function savePassword(formData: FormData) {
@@ -18,7 +21,7 @@ export async function savePassword(formData: FormData) {
   if (password.length < 6) redirect(`/perfil?error=${encodeURIComponent("La contraseña debe tener al menos 6 caracteres.")}`);
   if (password !== password2) redirect(`/perfil?error=${encodeURIComponent("Las dos contraseñas no coinciden.")}`);
   const { error } = await supabase.auth.updateUser({ password });
-  if (error) redirect(`/perfil?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/perfil?error=${encodeURIComponent(friendlyError(error.message))}`);
   redirect(
     `/perfil?ok=${encodeURIComponent("Contraseña guardada. A partir de ahora entra con tu email y esta contraseña.")}`,
   );
@@ -29,7 +32,7 @@ export async function saveEmail(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   if (email === profile.email) redirect(`/perfil?error=${encodeURIComponent("Ese ya es tu email.")}`);
   const { error } = await supabase.rpc("change_email", { target: profile.id, new_email: email });
-  if (error) redirect(`/perfil?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/perfil?error=${encodeURIComponent(friendlyError(error.message))}`);
   revalidatePath("/", "layout");
   redirect(
     `/perfil?ok=${encodeURIComponent(`Email cambiado. A partir de ahora entra con ${email} y tu contraseña de siempre.`)}`,
