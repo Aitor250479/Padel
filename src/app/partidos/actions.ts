@@ -1,5 +1,6 @@
 "use server";
 
+import { friendlyError } from "@/lib/errors";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { availablePairIds } from "@/lib/availability";
@@ -56,7 +57,7 @@ export async function generatePairings(formData: FormData) {
     const { error } = await supabase
       .from("matches")
       .insert(result.matches.map((m) => ({ week_start: weekStart, pair_a: m.a, pair_b: m.b })));
-    if (error) return back("/partidos", { semana: weekStart, error: error.message });
+    if (error) return back("/partidos", { semana: weekStart, error: friendlyError(error.message) });
   }
 
   back("/partidos", {
@@ -78,7 +79,7 @@ export async function createMatch(formData: FormData) {
     return back("/partidos", { semana: weekStart, error: "Elige dos parejas distintas" });
   }
   const { error } = await supabase.from("matches").insert({ week_start: weekStart, pair_a: a, pair_b: b });
-  back("/partidos", error ? { semana: weekStart, error: error.message } : { semana: weekStart, ok: "Partido creado." });
+  back("/partidos", error ? { semana: weekStart, error: friendlyError(error.message) } : { semana: weekStart, ok: "Partido creado." });
 }
 
 export async function updateMatch(formData: FormData) {
@@ -91,7 +92,7 @@ export async function updateMatch(formData: FormData) {
     .from("matches")
     .update({ pair_a: a, pair_b: b, status: String(formData.get("status")) })
     .eq("id", id);
-  back(`/partidos/${id}`, error ? { error: error.message } : { ok: "Partido actualizado." });
+  back(`/partidos/${id}`, error ? { error: friendlyError(error.message) } : { ok: "Partido actualizado." });
 }
 
 export async function deleteMatch(formData: FormData) {
@@ -99,7 +100,7 @@ export async function deleteMatch(formData: FormData) {
   const id = String(formData.get("id"));
   const weekStart = String(formData.get("week_start"));
   const { error } = await supabase.from("matches").delete().eq("id", id);
-  if (error) return back(`/partidos/${id}`, { error: error.message });
+  if (error) return back(`/partidos/${id}`, { error: friendlyError(error.message) });
   back("/partidos", { semana: weekStart, ok: "Partido borrado." });
 }
 
@@ -116,7 +117,7 @@ export async function saveBooking(formData: FormData) {
   if (!error && !data?.length) {
     return back(`/partidos/${id}`, { error: "Solo los jugadores del partido pueden cambiar la reserva" });
   }
-  back(`/partidos/${id}`, error ? { error: error.message } : { ok: "Lugar, fecha y hora guardados." });
+  back(`/partidos/${id}`, error ? { error: friendlyError(error.message) } : { ok: "Lugar, fecha y hora guardados." });
 }
 
 /**
@@ -155,7 +156,7 @@ export async function saveResult(formData: FormData) {
       .delete()
       .eq("match_id", id)
       .in("pair_id", pairs);
-    return back(`/partidos/${id}`, error ? { error: error.message } : { ok: "Resultado borrado." });
+    return back(`/partidos/${id}`, error ? { error: friendlyError(error.message) } : { ok: "Resultado borrado." });
   }
 
   if (!option) return back(`/partidos/${id}`, { error: "Elige un resultado" });
@@ -168,7 +169,7 @@ export async function saveResult(formData: FormData) {
       score_detail: detail || null,
     })),
   );
-  back(`/partidos/${id}`, error ? { error: error.message } : { ok: "Resultado guardado." });
+  back(`/partidos/${id}`, error ? { error: friendlyError(error.message) } : { ok: "Resultado guardado." });
 }
 
 /** El organizador da por bueno el resultado que puso una de las parejas (o fija uno). */
@@ -214,5 +215,5 @@ export async function confirmResultAsOrganizer(formData: FormData) {
       score_detail: detail,
     })),
   );
-  back(path, error ? { ...extra, error: error.message } : { ...extra, ok: "Resultado confirmado por el organizador." });
+  back(path, error ? { ...extra, error: friendlyError(error.message) } : { ...extra, ok: "Resultado confirmado por el organizador." });
 }

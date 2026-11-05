@@ -1,6 +1,7 @@
 import SubmitButton from "@/components/SubmitButton";
 import Link from "next/link";
 import Header from "@/components/Header";
+import Notice from "@/components/Notice";
 import { displayName, requireProfile, type Pair, type Profile } from "@/lib/session";
 import { addDays, currentWeek, formatWeekLong, parseWeek, weekLabel, weeksFromNow } from "@/lib/weeks";
 import { setAvailability } from "./actions";
@@ -10,12 +11,13 @@ type Answer = { profile_id: string; can_play: boolean };
 export default async function DisponibilidadPage({
   searchParams,
 }: {
-  searchParams: Promise<{ semana?: string }>;
+  searchParams: Promise<{ semana?: string; error?: string }>;
 }) {
   const { supabase, profile } = await requireProfile();
   // No se puede ir a semanas pasadas: como mínimo, la semana en curso.
   const thisWeek = currentWeek();
-  const requested = parseWeek((await searchParams).semana);
+  const params = await searchParams;
+  const requested = parseWeek(params.semana);
   const weekStart = requested < thisWeek ? thisWeek : requested;
   const offset = weeksFromNow(weekStart, thisWeek);
 
@@ -61,6 +63,7 @@ export default async function DisponibilidadPage({
       <Header profile={profile} />
       <main className="mx-auto max-w-xl px-4 py-6">
         <h1 className="mb-4 text-2xl font-bold">Disponibilidad</h1>
+        <Notice error={params.error} />
 
         <section className="mb-6 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
           <div className="mb-4 flex items-center gap-2">

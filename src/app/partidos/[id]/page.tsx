@@ -1,4 +1,5 @@
 import SubmitButton from "@/components/SubmitButton";
+import ConfirmButton from "@/components/ConfirmButton";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
@@ -231,7 +232,13 @@ export default async function MatchPage({
             <form action={deleteMatch} className="mt-3">
               <input type="hidden" name="id" value={match.id} />
               <input type="hidden" name="week_start" value={match.week_start} />
-              <SubmitButton pendingText="Borrando…" className="text-sm text-red-600 underline">Borrar partido</SubmitButton>
+              <ConfirmButton
+                message="¿Seguro que quieres borrar este partido? Se borrarán también sus resultados."
+                pendingText="Borrando…"
+                className="text-sm text-red-600 underline"
+              >
+                Borrar partido
+              </ConfirmButton>
             </form>
           </section>
         )}
@@ -263,13 +270,26 @@ function ResultForm({
         Sets ganados por cada pareja. Si el partido no se terminó, poned 1-1 (empate) o, si las
         dos parejas acordáis un ganador, 2-1 o 2-0.
       </p>
-      <div className="flex flex-col gap-1">
-        {RESULT_OPTIONS.map((o) => (
-          <label key={o.value} className="flex items-center gap-2">
-            <input type="radio" name="result" value={o.value} defaultChecked={value === o.value} />
-            {label(o.a, o.b)}
-          </label>
-        ))}
+      <div className="flex flex-col gap-2">
+        {RESULT_OPTIONS.map((o) => {
+          const [score, ...rest] = label(o.a, o.b).split(" · ");
+          return (
+            <label
+              key={o.value}
+              className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border-2 border-gray-200 px-3 py-2 has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50 dark:border-gray-800 dark:has-[:checked]:bg-emerald-950"
+            >
+              <input
+                type="radio"
+                name="result"
+                value={o.value}
+                defaultChecked={value === o.value}
+                className="h-5 w-5 shrink-0 accent-emerald-600"
+              />
+              <span className="text-lg font-black tabular-nums">{score}</span>
+              <span className="text-sm">{rest.join(" · ")}</span>
+            </label>
+          );
+        })}
       </div>
       <input
         name="score_detail"
@@ -278,13 +298,19 @@ function ResultForm({
         className={input}
       />
       <div className="flex gap-3">
-        <SubmitButton className="rounded-lg bg-emerald-600 px-3 py-1 font-semibold text-white">
+        <SubmitButton className="rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white">
           Guardar resultado
         </SubmitButton>
         {current && (
-          <SubmitButton name="clear" value="1" pendingText="Borrando…" className="text-red-600 underline">
+          <ConfirmButton
+            message="¿Seguro que quieres borrar el resultado?"
+            name="clear"
+            value="1"
+            pendingText="Borrando…"
+            className="text-red-600 underline"
+          >
             Borrar
-          </SubmitButton>
+          </ConfirmButton>
         )}
       </div>
     </form>

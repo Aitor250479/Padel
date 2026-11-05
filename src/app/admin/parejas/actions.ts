@@ -1,5 +1,6 @@
 "use server";
 
+import { friendlyError } from "@/lib/errors";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireOrganizer } from "@/lib/session";
@@ -12,7 +13,7 @@ function backTo(formData: FormData, fallback = "/admin/parejas") {
 
 function done(path: string, result?: { error?: { message: string } | null; ok?: string }) {
   revalidatePath("/", "layout");
-  if (result?.error) redirect(`${path}?error=${encodeURIComponent(result.error.message)}`);
+  if (result?.error) redirect(`${path}?error=${encodeURIComponent(friendlyError(result.error.message))}`);
   if (result?.ok) redirect(`${path}?ok=${encodeURIComponent(result.ok)}`);
   redirect(path);
 }

@@ -1,5 +1,6 @@
 "use server";
 
+import { friendlyError } from "@/lib/errors";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireOrganizer } from "@/lib/session";
@@ -15,7 +16,7 @@ export async function saveWelcome(formData: FormData) {
     { key: HOME_MODE_KEY, body: mode, updated_at: now, updated_by: profile.id },
   ]);
   revalidatePath("/", "layout");
-  if (error) redirect(`/admin/bienvenida?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/admin/bienvenida?error=${encodeURIComponent(friendlyError(error.message))}`);
   redirect(
     `/admin/bienvenida?ok=${encodeURIComponent(
       mode === "noticias"

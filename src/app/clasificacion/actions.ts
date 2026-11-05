@@ -1,5 +1,6 @@
 "use server";
 
+import { friendlyError } from "@/lib/errors";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireOrganizer } from "@/lib/session";
@@ -16,7 +17,7 @@ export async function startNewLeague(formData: FormData) {
   if (!name) return back({ error: "Ponle un nombre a la nueva liga." });
   if (word !== "REINICIAR") return back({ error: "Escribe REINICIAR para confirmar." });
   const { error } = await supabase.rpc("start_new_league", { new_name: name });
-  if (error) return back({ error: error.message });
+  if (error) return back({ error: friendlyError(error.message) });
   back({ ok: `¡Empieza "${name}"! La liga anterior queda guardada en Ligas anteriores.` });
 }
 
@@ -26,5 +27,5 @@ export async function renameLeague(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim().slice(0, 60);
   if (!name) return back({ error: "El nombre no puede estar vacío." });
   const { error } = await supabase.from("leagues").update({ name }).eq("id", id);
-  back(error ? { error: error.message } : { ok: "Nombre de la liga cambiado." });
+  back(error ? { error: friendlyError(error.message) } : { ok: "Nombre de la liga cambiado." });
 }

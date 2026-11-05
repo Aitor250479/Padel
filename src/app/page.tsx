@@ -3,10 +3,20 @@ import Header from "@/components/Header";
 import Scoreboard from "@/components/Scoreboard";
 import Image from "next/image";
 import { currentLeague, onlyLeague } from "@/lib/leagues";
-import { loadPairDirectory } from "@/lib/matches";
+import {
+  MATCH_COLUMNS,
+  PROPOSED_COLUMNS,
+  formatBooking,
+  loadPairDirectory,
+  resultOpen,
+  type Match,
+  type ProposedResult,
+} from "@/lib/matches";
+import { myTodos, type Todo } from "@/lib/todo";
+import TodoList from "@/components/TodoList";
 import { requireProfile } from "@/lib/session";
 import { HOME_MODE_KEY, WELCOME_KEY } from "@/lib/welcome";
-import { formatWeekLong } from "@/lib/weeks";
+import { addDays, currentWeek, defaultWeek, formatWeekLong, nowInSpain } from "@/lib/weeks";
 
 type News = {
   id: string;
@@ -29,32 +39,32 @@ export default async function Home() {
   const text =
     texts?.find((t) => t.key === WELCOME_KEY)?.body?.trim() || "¡Bienvenidos al Torneo Pádel Loyola! 🎾";
 
-  let news: News[] = [];
-  let directory: Awaited<ReturnType<typeof loadPairDirectory>> | null = null;
-  if (showNews) {
-    const league = await currentLeague(supabase);
-    const [{ data }, dir] = await Promise.all([
-      onlyLeague(
-        supabase.from("matches").select("id, week_start, pair_a, pair_b, sets_a, sets_b, score_detail"),
-        league,
-      )
-        .not("sets_a", "is", null)
-        .neq("status", "cancelado")
-        .order("result_at", { ascending: false, nullsFirst: false })
-        .order("week_start", { ascending: false })
-        .limit(5)
-        .returns<News[]>(),
-      loadPairDirectory(supabase),
-    ]);
-    news = data ?? [];
-    directory = dir;
-  }
+  const [league, directory] = await Promise.all([currentLeague(supabase), loadPairDirectory(supabase)]);
+  // Lo pendiente del jugador y las noticias se cargan a la vez.
+  const [todos, news] = await Promise.all([
+    profile.pair_id ? loadTodos(supabase, profile.id, profile.pair_id, league, directory) : Promise.resolve([]),
+    showNews
+      ? onlyLeague(
+          supabase.from("matches").select("id, week_start, pair_a, pair_b, sets_a, sets_b, score_detail"),
+          league,
+        )
+          .not("sets_a", "is", null)
+          .neq("status", "cancelado")
+          .order("result_at", { ascending: false, nullsFirst: false })
+          .order("week_start", { ascending: false })
+          .limit(5)
+          .returns<News[]>()
+          .then(({ data }) => data ?? [])
+      : Promise.resolve([] as News[]),
+  ]);
 
   return (
     <>
       <Header profile={profile} />
       <main className="mx-auto max-w-3xl px-4 py-6">
-        {showNews && directory ? (
+        {todos.length > 0 && <TodoList todos={todos} />}
+
+        {showNews ? (
           <section>
             <h1 className="mb-4 text-center text-2xl font-black uppercase italic tracking-tight">
               📰 Últimos resultados
@@ -102,4 +112,54 @@ export default async function Home() {
       </main>
     </>
   );
+}
+
+type Directory = Awaited<ReturnType<typeof loadPairDirectory>>;
+
+/** Lo que el jugador tiene pendiente: resultados, próximos partidos y disponibilidad. */
+async function loadTodos(
+  supabase: Awaited<ReturnType<typeof requireProfile>>["supabase"],
+  profileId: string,
+  pairId: string,
+  league: Awaited<ReturnType<typeof currentLeague>>,
+  directory: Directory,
+): Promise<Todo[]> {
+  const thisWeek = currentWeek();
+  const availabilityWeek = defaultWeek();
+  const [{ data: matches }, { data: answer }] = await Promise.all([
+    onlyLeague(
+      supabase
+        .from("matches")
+        .select(MATCH_COLUMNS)
+        .or(`pair_a.eq.${pairId},pair_b.eq.${pairId}`)
+        .neq("status", "cancelado")
+        .is("sets_a", null),
+      league,
+    ).returns<Match[]>(),
+    supabase
+      .from("player_availability")
+      .select("can_play")
+      .eq("profile_id", profileId)
+      .eq("week_start", availabilityWeek)
+      .maybeSingle(),
+  ]);
+  const ids = (matches ?? []).map((m) => m.id);
+  const { data: proposals } = ids.length
+    ? await supabase.from("match_results").select(PROPOSED_COLUMNS).in("match_id", ids).returns<ProposedResult[]>()
+    : { data: [] as ProposedResult[] };
+  const now = nowInSpain();
+  return myTodos({
+    myPair: pairId,
+    thisWeek,
+    nextWeek: addDays(thisWeek, 7),
+    matches: matches ?? [],
+    proposals: proposals ?? [],
+    availabilityWeek,
+    answered: !!answer,
+    isOpen: (m) => resultOpen(m, now),
+    pairName: directory.pairName,
+    playersOf: directory.playersOf,
+    formatBooking,
+    formatWeekLong,
+  });
 }

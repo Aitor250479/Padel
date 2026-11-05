@@ -38,3 +38,13 @@ body {
 
 /* Formulario bloqueado mientras se guarda (ver SubmitButton) */
 form[inert] { opacity: 0.6; transition: opacity 0.15s; }
+
+/* En el móvil, los campos con letra de menos de 16 px hacen que el iPhone
+   haga zoom al tocarlos. */
+@layer base {
+  input:not([type="radio"]):not([type="checkbox"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
