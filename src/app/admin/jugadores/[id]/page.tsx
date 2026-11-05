@@ -61,6 +61,13 @@ export default async function PlayerPage({
           {player.is_organizer && " · Organizador"}
         </p>
         <Notice ok={ok} error={error} />
+        <Link
+          href={`/jugadores/${player.id}/estadisticas`}
+          className="mb-4 flex items-center justify-between rounded-xl bg-neutral-950 p-4 font-semibold text-white hover:bg-neutral-800"
+        >
+          <span>📊 Estadísticas de juego</span>
+          <span aria-hidden className="text-lime-400">›</span>
+        </Link>
 
         <div className="flex flex-col gap-4">
           <section className={card}>
