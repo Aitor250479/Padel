@@ -2,6 +2,9 @@ import SubmitButton from "@/components/SubmitButton";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
+import WhatsAppLink from "@/components/WhatsAppLink";
+import { weekMessage } from "@/lib/share";
+import { siteUrl } from "@/lib/site-url";
 import { availablePairIds } from "@/lib/availability";
 import {
   MATCH_COLUMNS,
@@ -15,7 +18,7 @@ import {
 } from "@/lib/matches";
 import { currentLeague, onlyLeague } from "@/lib/leagues";
 import { requireProfile } from "@/lib/session";
-import { addDays, currentWeek, formatWeek, nowInSpain, parseWeek, weekLabel, weeksFromNow } from "@/lib/weeks";
+import { addDays, currentWeek, formatWeek, formatWeekLong, nowInSpain, parseWeek, weekLabel, weeksFromNow } from "@/lib/weeks";
 import { confirmResultAsOrganizer, createMatch, generatePairings } from "./actions";
 import { RESULT_OPTIONS } from "@/lib/standings";
 
@@ -155,6 +158,17 @@ export default async function PartidosPage({
               );
             })}
           </ul>
+        )}
+
+        {profile.is_organizer && active.length > 0 && (
+          <div className="mb-6">
+            <WhatsAppLink text={weekMessage(weekStart, matches ?? [], { pairName, playersOf, formatBooking, formatWeekLong }, await siteUrl())}>
+              Compartir los partidos por WhatsApp
+            </WhatsAppLink>
+            <p className="mt-1 text-xs opacity-70">
+              Abre WhatsApp con la lista de partidos de esta semana ya escrita, para mandarla al grupo.
+            </p>
+          </div>
         )}
 
         {free.length > 0 && (
