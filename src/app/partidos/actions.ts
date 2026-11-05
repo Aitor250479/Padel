@@ -7,6 +7,7 @@ import { MATCH_COLUMNS, resultOpen, type Match } from "@/lib/matches";
 import { makePairings, type Candidate } from "@/lib/pairing";
 import { requireOrganizer, requireProfile } from "@/lib/session";
 import { RESULT_OPTIONS } from "@/lib/standings";
+import { currentLeague, onlyLeague } from "@/lib/leagues";
 import { nowInSpain } from "@/lib/weeks";
 
 function back(path: string, params: Record<string, string>) {
@@ -18,13 +19,13 @@ export async function generatePairings(formData: FormData) {
   const { supabase } = await requireOrganizer();
   const weekStart = String(formData.get("week_start"));
 
+  const league = await currentLeague(supabase);
   const [available, { data: matches }] = await Promise.all([
     availablePairIds(supabase, weekStart),
-    supabase
-      .from("matches")
-      .select("week_start, pair_a, pair_b")
-      .neq("status", "cancelado")
-      .returns<{ week_start: string; pair_a: string; pair_b: string }[]>(),
+    onlyLeague(
+      supabase.from("matches").select("week_start, pair_a, pair_b").neq("status", "cancelado"),
+      league,
+    ).returns<{ week_start: string; pair_a: string; pair_b: string }[]>(),
   ]);
 
   const played = new Map<string, number>();

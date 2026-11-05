@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Header from "@/components/Header";
 import Scoreboard from "@/components/Scoreboard";
+import Image from "next/image";
+import { currentLeague, onlyLeague } from "@/lib/leagues";
 import { loadPairDirectory } from "@/lib/matches";
 import { requireProfile } from "@/lib/session";
 import { HOME_MODE_KEY, WELCOME_KEY } from "@/lib/welcome";
@@ -30,10 +32,12 @@ export default async function Home() {
   let news: News[] = [];
   let directory: Awaited<ReturnType<typeof loadPairDirectory>> | null = null;
   if (showNews) {
+    const league = await currentLeague(supabase);
     const [{ data }, dir] = await Promise.all([
-      supabase
-        .from("matches")
-        .select("id, week_start, pair_a, pair_b, sets_a, sets_b, score_detail")
+      onlyLeague(
+        supabase.from("matches").select("id, week_start, pair_a, pair_b, sets_a, sets_b, score_detail"),
+        league,
+      )
         .not("sets_a", "is", null)
         .neq("status", "cancelado")
         .order("result_at", { ascending: false, nullsFirst: false })
@@ -68,9 +72,14 @@ export default async function Home() {
                 ))}
               </div>
             ) : (
-              <p className="rounded-2xl bg-neutral-50 p-5 text-center dark:bg-neutral-900">
-                Todavía no hay resultados confirmados. ¡A jugar! 🎾
-              </p>
+              <Image
+                src="/sinresultados.png"
+                alt="La liga aún no ha empezado. Todavía no hay resultados"
+                width={1000}
+                height={333}
+                className="h-auto w-full"
+                priority
+              />
             )}
           </section>
         ) : (

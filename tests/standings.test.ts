@@ -10,8 +10,8 @@ const r = computeStandings(["A", "B", "C", "D"], [
 ]);
 const by = Object.fromEntries(r.map((x) => [x.pairId, x]));
 const expect = (cond: boolean, msg: string) => { console.log(cond ? "ok" : "FAIL", msg); if (!cond) process.exitCode = 1; };
-expect(by.A.points === 3 && by.A.won === 1 && by.A.drawn === 1 && by.A.played === 2, "A: 2-0 y 1-1 = 3 puntos, 1G 1E");
+expect(by.A.points === 4 && by.A.won === 1 && by.A.drawn === 1 && by.A.played === 2, "A: 2-0 (3) y 1-1 (1) = 4 puntos, 1G 1E");
 expect(by.B.points === 2 && by.B.won === 1 && by.B.lost === 1, "B: 0-2 y 2-1 = 2 puntos, 1G 1P");
 expect(by.C.points === 2 && by.C.drawn === 1 && by.C.lost === 1, "C: 1-2 y 1-1 = 2 puntos, 1E 1P");
 expect(by.D.points === 3 && by.D.won === 1 && by.D.lost === 1, "D: 2-1 y 1-2 = 3 puntos");
-expect(r.map((x) => x.pairId).join("") === "ADBC", "orden: A y D empatan a 3 y desempata la diferencia de sets; B delante de C por ganados");
+expect(r.map((x) => x.pairId).join("") === "ADBC", "orden: A 4, D 3, B y C empatan a 2 y B va delante por ganados");
