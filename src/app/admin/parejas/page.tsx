@@ -67,6 +67,24 @@ export default async function ParejasPage({
           </details>
         </section>
 
+        <section className="mb-8 rounded-xl border border-lime-400 bg-lime-50 p-4 dark:bg-neutral-900">
+          <h2 className="mb-1 font-semibold">🎲 Crear parejas al azar</h2>
+          <p className="mb-3 text-sm opacity-70">
+            Verás primero cómo quedarían y podrás confirmarlas o volver a sortear.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/admin/parejas/sorteo?modo=sin" className={button}>
+              Con los jugadores sin pareja ({unassigned.length})
+            </Link>
+            <Link
+              href="/admin/parejas/sorteo?modo=todos"
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold dark:bg-transparent"
+            >
+              Rehacer todas las parejas ({players?.length ?? 0} jugadores)
+            </Link>
+          </div>
+        </section>
+
         <section>
           <h2 className="mb-1 text-lg font-semibold">Jugadores sin pareja ({unassigned.length})</h2>
           <p className="mb-3 text-sm opacity-70">
