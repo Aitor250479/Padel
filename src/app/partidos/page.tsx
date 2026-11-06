@@ -2,6 +2,7 @@ import SubmitButton from "@/components/SubmitButton";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
+import ResultFields from "@/components/ResultFields";
 import WhatsAppLink from "@/components/WhatsAppLink";
 import { weekMessage } from "@/lib/share";
 import { siteUrl } from "@/lib/site-url";
@@ -82,23 +83,34 @@ export default async function PartidosPage({
   const availableSet = new Set(available);
   const free = pairs.filter((p) => !busy.has(p.id));
 
+  const arrow =
+    "grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 border-lime-400 text-xl font-bold";
+
   return (
     <>
       <Header profile={profile} />
       <main className="mx-auto max-w-3xl px-4 py-6">
         <h1 className="mb-1 text-2xl font-bold">Partidos</h1>
-        <div className="mb-4 flex items-center gap-3 text-sm">
-          <Link href={`/partidos?semana=${addDays(weekStart, -7)}`} className="underline">
-            ← Anterior
+        <div className="mb-4 flex items-center gap-2">
+          <Link
+            href={`/partidos?semana=${addDays(weekStart, -7)}`}
+            aria-label="Semana anterior"
+            className={`${arrow} hover:bg-lime-100 dark:hover:bg-lime-950`}
+          >
+            ‹
           </Link>
-          <span className="text-center">
+          <div className="flex-1 text-center">
             <span className="inline-block rounded-full bg-lime-400 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-neutral-950">
               {weekLabel(weeksFromNow(weekStart, thisWeek))}
-            </span>{" "}
-            <span className="font-semibold">Semana del {formatWeek(weekStart)}</span>
-          </span>
-          <Link href={`/partidos?semana=${addDays(weekStart, 7)}`} className="underline">
-            Siguiente →
+            </span>
+            <p className="mt-1 font-semibold leading-snug">Semana del {formatWeekLong(weekStart)}</p>
+          </div>
+          <Link
+            href={`/partidos?semana=${addDays(weekStart, 7)}`}
+            aria-label="Semana siguiente"
+            className={`${arrow} hover:bg-lime-100 dark:hover:bg-lime-950`}
+          >
+            ›
           </Link>
         </div>
 
@@ -230,21 +242,16 @@ export default async function PartidosPage({
                         <summary className="cursor-pointer text-xs underline opacity-70">
                           Poner otro resultado
                         </summary>
-                        <form action={confirmResultAsOrganizer} className="mt-2 flex flex-wrap gap-2">
+                        <form action={confirmResultAsOrganizer} className="mt-2 flex flex-col gap-2">
                           <input type="hidden" name="id" value={m.id} />
                           <input type="hidden" name="week" value={weekStart} />
-                          <select name="result" required defaultValue="" className={input}>
-                            <option value="" disabled>
-                              Resultado
-                            </option>
-                            {RESULT_OPTIONS.map((o) => (
-                              <option key={o.value} value={o.value}>
-                                {pairName(m.pair_a)} {o.value} {pairName(m.pair_b)}
-                              </option>
-                            ))}
-                          </select>
-                          <input name="score_detail" placeholder="Juegos (ej.: 6-4 3-6 7-5)" className={input} />
-                          <SubmitButton className="rounded-lg bg-gray-800 px-3 py-1 font-semibold text-white">
+                          <ResultFields
+                            compact
+                            options={RESULT_OPTIONS.map((o) => ({ ...o, score: o.value, text: "" }))}
+                            pairA={pairName(m.pair_a)}
+                            pairB={pairName(m.pair_b)}
+                          />
+                          <SubmitButton className="self-start rounded-lg bg-gray-800 px-3 py-1 font-semibold text-white">
                             Confirmar
                           </SubmitButton>
                         </form>

@@ -7,6 +7,7 @@ import { availablePairIds } from "@/lib/availability";
 import { MATCH_COLUMNS, resultOpen, type Match } from "@/lib/matches";
 import { makePairings, type Candidate } from "@/lib/pairing";
 import { requireOrganizer, requireProfile } from "@/lib/session";
+import { formatGames, gamesMatchResult, readGames } from "@/lib/score";
 import { RESULT_OPTIONS } from "@/lib/standings";
 import { currentLeague, onlyLeague } from "@/lib/leagues";
 import { nowInSpain } from "@/lib/weeks";
@@ -130,7 +131,6 @@ export async function saveResult(formData: FormData) {
   const asOrganizer = formData.get("as_organizer") === "1" && profile.is_organizer;
   const clear = formData.get("clear") === "1";
   const option = RESULT_OPTIONS.find((o) => o.value === String(formData.get("result") ?? ""));
-  const detail = String(formData.get("score_detail") ?? "").trim().slice(0, 60);
 
   const { data: match } = await supabase
     .from("matches")
@@ -160,13 +160,18 @@ export async function saveResult(formData: FormData) {
   }
 
   if (!option) return back(`/partidos/${id}`, { error: "Elige un resultado" });
+  const games = readGames((name) => formData.get(name));
+  if ("error" in games) return back(`/partidos/${id}`, { error: games.error });
+  const mismatch = gamesMatchResult(games.sets, option);
+  if (mismatch) return back(`/partidos/${id}`, { error: mismatch });
+  const detail = formatGames(games.sets);
   const { error } = await supabase.from("match_results").upsert(
     pairs.map((pairId) => ({
       match_id: id,
       pair_id: pairId,
       sets_a: option.a,
       sets_b: option.b,
-      score_detail: detail || null,
+      score_detail: detail,
     })),
   );
   back(`/partidos/${id}`, error ? { error: friendlyError(error.message) } : { ok: "Resultado guardado." });
@@ -201,9 +206,13 @@ export async function confirmResultAsOrganizer(formData: FormData) {
   } else {
     const option = RESULT_OPTIONS.find((o) => o.value === String(formData.get("result") ?? ""));
     if (!option) return back(path, { ...extra, error: "Elige un resultado" });
+    const games = readGames((name) => formData.get(name));
+    if ("error" in games) return back(path, { ...extra, error: games.error });
+    const mismatch = gamesMatchResult(games.sets, option);
+    if (mismatch) return back(path, { ...extra, error: mismatch });
     a = option.a;
     b = option.b;
-    detail = String(formData.get("score_detail") ?? "").trim().slice(0, 60) || null;
+    detail = formatGames(games.sets);
   }
 
   const { error } = await supabase.from("match_results").upsert(
