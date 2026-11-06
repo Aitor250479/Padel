@@ -30,11 +30,11 @@ export default async function SorteoPage({
     supabase.from("pairs").select("id, name").order("name").returns<Pair[]>(),
     supabase
       .from("profiles")
-      .select("id, email, full_name, is_organizer, pair_id")
+      .select("*")
       .returns<Profile[]>(),
   ]);
 
-  const candidates = shuffle((players ?? []).filter((p) => all || !p.pair_id));
+  const candidates = shuffle((players ?? []).filter((p) => p.active !== false && (all || !p.pair_id)));
   const groups: Profile[][] = [];
   for (let i = 0; i + 1 < candidates.length; i += 2) groups.push([candidates[i], candidates[i + 1]]);
   const leftover = candidates.length % 2 ? candidates[candidates.length - 1] : null;

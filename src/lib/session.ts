@@ -7,6 +7,8 @@ export type Profile = {
   full_name: string | null;
   is_organizer: boolean;
   pair_id: string | null;
+  /** false si un organizador lo ha desactivado (undefined antes de la migración 013). */
+  active?: boolean;
 };
 
 export type Pair = { id: string; name: string };
@@ -22,10 +24,14 @@ export async function requireProfile() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, email, full_name, is_organizer, pair_id")
+    .select("*")
     .eq("id", userId)
     .single<Profile>();
   if (!profile) redirect("/login");
+  if (profile.active === false) {
+    await supabase.auth.signOut();
+    redirect(`/login?error=${encodeURIComponent("Tu cuenta está desactivada. Habla con un organizador.")}`);
+  }
 
   return { supabase, profile };
 }
