@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
+import ResultFields from "@/components/ResultFields";
 import WhatsAppLink from "@/components/WhatsAppLink";
 import { matchMessage } from "@/lib/share";
 import { siteUrl } from "@/lib/site-url";
@@ -18,6 +19,7 @@ import {
   type ProposedResult,
 } from "@/lib/matches";
 import { requireProfile } from "@/lib/session";
+import { gameField, parseGames } from "@/lib/score";
 import { RESULT_OPTIONS } from "@/lib/standings";
 import { formatWeek, formatWeekLong, nowInSpain } from "@/lib/weeks";
 import { deleteMatch, saveBooking, saveResult, updateMatch } from "../actions";
@@ -165,7 +167,10 @@ export default async function MatchPage({
                       name="result"
                       value={`${otherProposal.sets_a}-${otherProposal.sets_b}`}
                     />
-                    <input type="hidden" name="score_detail" value={otherProposal.score_detail ?? ""} />
+                    {parseGames(otherProposal.score_detail).flatMap((g, i) => [
+                      <input key={`a${i}`} type="hidden" name={gameField("a", i + 1)} value={g.a} />,
+                      <input key={`b${i}`} type="hidden" name={gameField("b", i + 1)} value={g.b} />,
+                    ])}
                     <SubmitButton className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white">
                       ✅ Confirmar {otherProposal.sets_a}-{otherProposal.sets_b}
                     </SubmitButton>
@@ -178,6 +183,8 @@ export default async function MatchPage({
                   matchId={match.id}
                   current={myProposal}
                   label={label}
+                  pairA={pairName(match.pair_a)}
+                  pairB={pairName(match.pair_b)}
                   title={myProposal ? "Cambiar vuestro resultado" : "Poner el resultado de vuestra pareja"}
                 />
               </>
@@ -195,6 +202,8 @@ export default async function MatchPage({
                   matchId={match.id}
                   current={status.tone === "ok" && match.sets_a !== null ? { sets_a: match.sets_a, sets_b: match.sets_b!, score_detail: match.score_detail } : undefined}
                   label={label}
+                  pairA={pairName(match.pair_a)}
+                  pairB={pairName(match.pair_b)}
                   asOrganizer
                 />
               </details>
@@ -251,16 +260,23 @@ function ResultForm({
   matchId,
   current,
   label,
+  pairA,
+  pairB,
   title,
   asOrganizer,
 }: {
   matchId: string;
   current?: { sets_a: number; sets_b: number; score_detail: string | null };
   label: (a: number, b: number) => string;
+  pairA: string;
+  pairB: string;
   title?: string;
   asOrganizer?: boolean;
 }) {
-  const value = current ? `${current.sets_a}-${current.sets_b}` : "";
+  const options = RESULT_OPTIONS.map((o) => {
+    const [score, ...rest] = label(o.a, o.b).split(" · ");
+    return { ...o, score, text: rest.join(" · ") };
+  });
   return (
     <form action={saveResult} className="mt-3 flex flex-col gap-2 text-sm">
       <input type="hidden" name="id" value={matchId} />
@@ -270,32 +286,12 @@ function ResultForm({
         Sets ganados por cada pareja. Si el partido no se terminó, poned 1-1 (empate) o, si las
         dos parejas acordáis un ganador, 2-1 o 2-0.
       </p>
-      <div className="flex flex-col gap-2">
-        {RESULT_OPTIONS.map((o) => {
-          const [score, ...rest] = label(o.a, o.b).split(" · ");
-          return (
-            <label
-              key={o.value}
-              className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border-2 border-gray-200 px-3 py-2 has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50 dark:border-gray-800 dark:has-[:checked]:bg-emerald-950"
-            >
-              <input
-                type="radio"
-                name="result"
-                value={o.value}
-                defaultChecked={value === o.value}
-                className="h-5 w-5 shrink-0 accent-emerald-600"
-              />
-              <span className="text-lg font-black tabular-nums">{score}</span>
-              <span className="text-sm">{rest.join(" · ")}</span>
-            </label>
-          );
-        })}
-      </div>
-      <input
-        name="score_detail"
-        defaultValue={current?.score_detail ?? ""}
-        placeholder="Juegos, opcional (ej.: 6-4 3-6 7-5)"
-        className={input}
+      <ResultFields
+        options={options}
+        pairA={pairA}
+        pairB={pairB}
+        defaultResult={current ? `${current.sets_a}-${current.sets_b}` : ""}
+        defaultDetail={current?.score_detail}
       />
       <div className="flex gap-3">
         <SubmitButton className="rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white">
