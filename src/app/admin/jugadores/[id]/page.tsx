@@ -7,7 +7,9 @@ import Notice from "@/components/Notice";
 import { displayName, requireOrganizer, type Pair, type Profile } from "@/lib/session";
 import {
   assignPlayer,
+  deletePlayer,
   savePlayerName,
+  setPlayerActive,
   setPlayerEmail,
   setPlayerPassword,
   toggleOrganizer,
@@ -28,7 +30,7 @@ export default async function PlayerPage({
   const [{ data: player }, { data: pairs }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, email, full_name, is_organizer, pair_id")
+      .select("*")
       .eq("id", id)
       .maybeSingle<Profile>(),
     supabase.from("pairs").select("id, name").order("name").returns<Pair[]>(),
@@ -37,6 +39,8 @@ export default async function PlayerPage({
 
   const pair = (pairs ?? []).find((p) => p.id === player.pair_id);
   const back = `/admin/jugadores/${player.id}`;
+  const inactive = player.active === false;
+  const isMe = player.id === profile.id;
 
   return (
     <>
@@ -50,9 +54,16 @@ export default async function PlayerPage({
         </Link>
         <h1 className="mt-2 text-2xl font-bold">
           {displayName(player)} {player.is_organizer && <span className="text-base">⭐</span>}
+          {inactive && (
+            <span className="ml-2 rounded-full bg-gray-200 px-2 py-0.5 align-middle text-xs font-semibold text-gray-700">
+              Desactivado
+            </span>
+          )}
         </h1>
         <p className="mb-4 text-sm opacity-70">
-          {pair ? (
+          {inactive ? (
+            "No puede entrar en la web y no entra en parejas ni sorteos"
+          ) : pair ? (
             <>
               Pareja: <b>{pair.name}</b>
             </>
@@ -108,22 +119,24 @@ export default async function PlayerPage({
             </form>
           </section>
 
-          <section className={card}>
-            <h2 className="mb-3 font-semibold">Pareja</h2>
-            <form action={assignPlayer} className="flex flex-wrap gap-2">
-              <input type="hidden" name="player_id" value={player.id} />
-              <input type="hidden" name="back" value={back} />
-              <select name="pair_id" defaultValue={player.pair_id ?? ""} className={`${input} flex-1`}>
-                <option value="">Sin pareja</option>
-                {(pairs ?? []).map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-              <SubmitButton className={button}>Guardar</SubmitButton>
-            </form>
-          </section>
+          {!inactive && (
+            <section className={card}>
+              <h2 className="mb-3 font-semibold">Pareja</h2>
+              <form action={assignPlayer} className="flex flex-wrap gap-2">
+                <input type="hidden" name="player_id" value={player.id} />
+                <input type="hidden" name="back" value={back} />
+                <select name="pair_id" defaultValue={player.pair_id ?? ""} className={`${input} flex-1`}>
+                  <option value="">Sin pareja</option>
+                  {(pairs ?? []).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+                <SubmitButton className={button}>Guardar</SubmitButton>
+              </form>
+            </section>
+          )}
 
           <section className={card}>
             <h2 className="mb-1 font-semibold">Contraseña</h2>
@@ -145,7 +158,7 @@ export default async function PlayerPage({
             </form>
           </section>
 
-          {player.id !== profile.id && (
+          {!isMe && !inactive && (
             <section className={card}>
               <h2 className="mb-1 font-semibold">Organizador</h2>
               <p className="mb-3 text-sm opacity-70">
@@ -158,6 +171,56 @@ export default async function PlayerPage({
                   {player.is_organizer ? "Quitar organizador" : "Hacer organizador"}
                 </SubmitButton>
               </form>
+            </section>
+          )}
+
+          {!isMe && !inactive && (
+            <section className={card}>
+              <h2 className="mb-1 font-semibold">Desactivar jugador</h2>
+              <p className="mb-3 text-sm opacity-70">
+                Sale de su pareja, deja de entrar en los sorteos y no podrá entrar en la web. Sus partidos y
+                estadísticas se conservan. Puedes reactivarlo cuando quieras.
+              </p>
+              <form action={setPlayerActive}>
+                <input type="hidden" name="player_id" value={player.id} />
+                <input type="hidden" name="active" value="false" />
+                <ConfirmButton
+                  message={`${displayName(player)} saldrá de su pareja y no podrá entrar en la web. ¿Desactivarlo?`}
+                  pendingText="Desactivando…"
+                  className="rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-700"
+                >
+                  Desactivar
+                </ConfirmButton>
+              </form>
+            </section>
+          )}
+
+          {!isMe && inactive && (
+            <section className={card}>
+              <h2 className="mb-1 font-semibold">Reactivar o eliminar</h2>
+              <p className="mb-3 text-sm opacity-70">
+                Si lo reactivas podrá volver a entrar y tendrás que asignarle pareja. Si lo eliminas, se borra su
+                cuenta para siempre.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <form action={setPlayerActive}>
+                  <input type="hidden" name="player_id" value={player.id} />
+                  <input type="hidden" name="active" value="true" />
+                  <SubmitButton pendingText="Reactivando…" className={button}>
+                    Reactivar
+                  </SubmitButton>
+                </form>
+                <form action={deletePlayer}>
+                  <input type="hidden" name="player_id" value={player.id} />
+                  <ConfirmButton
+                    message={`Se borrará la cuenta de ${displayName(player)} para siempre y no se puede deshacer. ¿Eliminarlo?`}
+                    pendingText="Eliminando…"
+                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                  >
+                    Eliminar definitivamente
+                  </ConfirmButton>
+                </form>
+              </div>
             </section>
           )}
         </div>

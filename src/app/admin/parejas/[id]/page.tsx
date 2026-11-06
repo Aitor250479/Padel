@@ -23,14 +23,14 @@ export default async function PairPage({
     supabase.from("pairs").select("id, name").eq("id", id).maybeSingle<Pair>(),
     supabase
       .from("profiles")
-      .select("id, email, full_name, is_organizer, pair_id")
+      .select("*")
       .order("full_name")
       .returns<Profile[]>(),
   ]);
   if (!pair) notFound();
 
   const members = (players ?? []).filter((p) => p.pair_id === pair.id);
-  const unassigned = (players ?? []).filter((p) => !p.pair_id);
+  const unassigned = (players ?? []).filter((p) => p.active !== false && !p.pair_id);
   const back = `/admin/parejas/${pair.id}`;
 
   return (

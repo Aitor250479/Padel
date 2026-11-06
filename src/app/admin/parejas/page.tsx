@@ -3,7 +3,7 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
 import { displayName, requireOrganizer, type Pair, type Profile } from "@/lib/session";
-import { createPair } from "./actions";
+import { createPair, createPlayer } from "./actions";
 import { button, input, rowLink } from "./ui";
 
 export default async function ParejasPage({
@@ -18,13 +18,15 @@ export default async function ParejasPage({
     supabase.from("pairs").select("id, name").order("name").returns<Pair[]>(),
     supabase
       .from("profiles")
-      .select("id, email, full_name, is_organizer, pair_id")
+      .select("*")
       .order("full_name")
       .returns<Profile[]>(),
   ]);
 
   const playersOf = (pairId: string) => (players ?? []).filter((p) => p.pair_id === pairId);
-  const unassigned = (players ?? []).filter((p) => !p.pair_id);
+  const active = (players ?? []).filter((p) => p.active !== false);
+  const inactive = (players ?? []).filter((p) => p.active === false);
+  const unassigned = active.filter((p) => !p.pair_id);
 
   return (
     <>
@@ -81,15 +83,15 @@ export default async function ParejasPage({
               href="/admin/parejas/sorteo?modo=todos"
               className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold dark:bg-transparent"
             >
-              Rehacer todas las parejas ({players?.length ?? 0} jugadores)
+              Rehacer todas las parejas ({active.length} jugadores)
             </Link>
           </div>
         </section>
 
-        <section>
+        <section className="mb-8">
           <h2 className="mb-1 text-lg font-semibold">Jugadores sin pareja ({unassigned.length})</h2>
           <p className="mb-3 text-sm opacity-70">
-            Aparecen aquí cuando se dan de alta en la web. Entra en uno para asignarle pareja.
+            Aparecen aquí cuando se dan de alta. Entra en uno para asignarle pareja.
           </p>
           {unassigned.length ? (
             <ul className="grid gap-2 sm:grid-cols-2">
@@ -108,7 +110,55 @@ export default async function ParejasPage({
           ) : (
             <p className="text-sm opacity-70">Todos los jugadores tienen pareja. 🎉</p>
           )}
+          <details className="mt-3 text-sm">
+            <summary className="cursor-pointer font-semibold text-emerald-700 dark:text-emerald-400">
+              ➕ Dar de alta un jugador
+            </summary>
+            <p className="mt-2 opacity-70">
+              Pon su email y una contraseña, y pásaselos para que entre. Luego podrá cambiar la contraseña en
+              Mi perfil.
+            </p>
+            <form action={createPlayer} className="mt-2 grid gap-2 sm:grid-cols-2">
+              <input name="full_name" placeholder="Nombre y apellido" className={input} />
+              <input name="email" type="email" required placeholder="Email" autoComplete="off" className={input} />
+              <input
+                name="password"
+                type="text"
+                required
+                minLength={6}
+                autoComplete="off"
+                placeholder="Contraseña (mín. 6)"
+                className={input}
+              />
+              <SubmitButton pendingText="Creando…" className={button}>
+                Crear jugador
+              </SubmitButton>
+            </form>
+          </details>
         </section>
+
+        {inactive.length > 0 && (
+          <section>
+            <h2 className="mb-1 text-lg font-semibold">Jugadores desactivados ({inactive.length})</h2>
+            <p className="mb-3 text-sm opacity-70">
+              No pueden entrar en la web ni entran en parejas ni sorteos. Entra en uno para reactivarlo o
+              eliminarlo.
+            </p>
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {inactive.map((p) => (
+                <li key={p.id}>
+                  <Link href={`/admin/jugadores/${p.id}`} className={`${rowLink} opacity-70`}>
+                    <span className="min-w-0">
+                      <span className="block font-semibold">{displayName(p)}</span>
+                      <span className="block truncate text-xs opacity-60">{p.email}</span>
+                    </span>
+                    <span aria-hidden className="opacity-50">›</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </main>
     </>
   );
