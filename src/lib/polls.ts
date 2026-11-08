@@ -38,3 +38,42 @@ export async function loadPoll(supabase: SupabaseClient, pollId: string | null |
   if (!poll) return null;
   return { poll, options: options ?? [], votes: votes ?? [] };
 }
+
+/**
+ * Instante (milisegundos) de una hora local de Madrid "YYYY-MM-DDTHH:MM[:SS]",
+ * teniendo en cuenta el horario de verano.
+ */
+export function madridToEpoch(local: string) {
+  const [d, t = "00:00:00"] = local.split("T");
+  const [y, mo, da] = d.split("-").map(Number);
+  const [h, mi, s = 0] = t.split(":").map(Number);
+  const asUtc = Date.UTC(y, mo - 1, da, h, mi, s);
+  const offsetAt = (ms: number) => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Europe/Madrid",
+      hourCycle: "h23",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }).formatToParts(new Date(ms));
+    const get = (k: string) => Number(parts.find((p) => p.type === k)?.value);
+    return Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second")) - ms;
+  };
+  let epoch = asUtc - offsetAt(asUtc);
+  epoch = asUtc - offsetAt(epoch);
+  return epoch;
+}
+
+/** Días, horas, minutos y segundos que faltan (nunca negativos). */
+export function countdownParts(ms: number) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  return {
+    days: Math.floor(total / 86400),
+    hours: Math.floor((total % 86400) / 3600),
+    minutes: Math.floor((total % 3600) / 60),
+    seconds: total % 60,
+  };
+}
