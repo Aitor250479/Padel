@@ -4,6 +4,7 @@ import Notice from "@/components/Notice";
 import { requireOrganizer } from "@/lib/session";
 import PollOptionsFields from "@/components/PollOptionsFields";
 import SharePollButton from "@/components/SharePollButton";
+import SharePollResultButton from "@/components/SharePollResultButton";
 import ShareImageButton from "@/components/ShareImageButton";
 import { siteUrl } from "@/lib/site-url";
 import { formatBooking } from "@/lib/matches";
@@ -159,6 +160,11 @@ export default async function BienvenidaPage({
                 />
               </div>
             )}
+            {results && results.total > 0 && (
+              <div className="mb-4">
+                <SharePollResultButton text={resultText(current.poll.question, results)} />
+              </div>
+            )}
             <form action={updatePollClose} className="flex flex-wrap items-center gap-2 text-sm">
               <input type="hidden" name="id" value={current.poll.id} />
               <span className="font-semibold">{open ? "Cambiar el cierre:" : "Reabrir hasta el"}</span>
@@ -194,4 +200,18 @@ export default async function BienvenidaPage({
       </main>
     </>
   );
+}
+
+/** Texto que acompaña al cartel del resultado (sin enlaces). */
+function resultText(question: string, results: ReturnType<typeof pollResults>) {
+  const winners = results.rows.filter((r) => r.winner);
+  const head =
+    winners.length > 1
+      ? `🤝 Empate entre ${winners.map((r) => `*${r.label}*`).join(" y ")} con un ${winners[0].percent}% cada una`
+      : `🏆 Gana *${winners[0].label}* con un ${winners[0].percent}% de los votos`;
+  const lines = [...results.rows]
+    .sort((a, b) => b.count - a.count)
+    .map((r) => `${r.winner ? "🥇" : "▫️"} ${r.label}: ${r.percent}%`);
+  const votes = `${results.total} ${results.total === 1 ? "voto" : "votos"}`;
+  return [`🗳️ *Resultado de la encuesta del Torneo Pádel Loyola*`, `*${question}*`, head, "", ...lines, "", votes].join("\n");
 }
