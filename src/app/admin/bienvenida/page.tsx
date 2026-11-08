@@ -4,6 +4,7 @@ import Notice from "@/components/Notice";
 import { requireOrganizer } from "@/lib/session";
 import PollOptionsFields from "@/components/PollOptionsFields";
 import SharePollButton from "@/components/SharePollButton";
+import ShareImageButton from "@/components/ShareImageButton";
 import { siteUrl } from "@/lib/site-url";
 import { formatBooking } from "@/lib/matches";
 import { POLL_KEY, loadPoll, pollOpen, pollResults } from "@/lib/polls";
@@ -37,6 +38,7 @@ export default async function BienvenidaPage({
     ? ((await supabase.rpc("poll_participation", { p: current.poll.id })).data as { voted: number; eligible: number }[] | null)?.[0] ?? null
     : null;
   const tomorrow = addDays(now.slice(0, 10), 1);
+  const invite = `${await siteUrl()}/unete`;
 
   const option =
     "flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 p-3 has-[:checked]:border-lime-400 has-[:checked]:bg-lime-50 dark:border-gray-800 dark:has-[:checked]:bg-neutral-900";
@@ -175,6 +177,20 @@ export default async function BienvenidaPage({
             </form>
           </section>
         )}
+
+        <section className="mt-8 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+          <h2 className="mb-1 font-semibold">📨 Invitar a nuevos jugadores</h2>
+          <p className="mb-3 text-sm opacity-70">
+            Envía por WhatsApp la invitación a quien quieras. Lleva un enlace que abre directamente la
+            pantalla de crear cuenta: {invite}
+          </p>
+          <ShareImageButton
+            text={`🎾 *¡Únete al Torneo Pádel Loyola!* 🎾\nBuscamos nuevos jugadores. Crea tu usuario en un minuto y, al entrar, marca cuándo puedes jugar: el sorteo se encarga del resto 😎\n👉 ${invite}`}
+            imageUrl="/unete/cartel"
+            fileName="invitacion.png"
+            label="Invitar por WhatsApp"
+          />
+        </section>
       </main>
     </>
   );
