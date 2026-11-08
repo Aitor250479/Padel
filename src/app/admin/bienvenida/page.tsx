@@ -30,6 +30,10 @@ export default async function BienvenidaPage({
   const now = nowInSpain();
   const open = current ? pollOpen(current.poll, now) : false;
   const results = current && !open ? pollResults(current.options, current.votes) : null;
+  // Participación: cuántos jugadores activos han votado (sin saber quién ni qué).
+  const participation = current
+    ? ((await supabase.rpc("poll_participation", { p: current.poll.id })).data as { voted: number; eligible: number }[] | null)?.[0] ?? null
+    : null;
   const tomorrow = addDays(now.slice(0, 10), 1);
 
   const option =
@@ -113,6 +117,21 @@ export default async function BienvenidaPage({
                 : `Cerrada el ${formatBooking(current.poll.closes_at)} · ${results!.total} ${results!.total === 1 ? "voto" : "votos"}`}
               {mode !== "encuesta" && " · Ahora no se muestra en el inicio."}
             </p>
+            {participation && (
+              <div className="mb-3">
+                <p className="text-sm font-semibold">
+                  🗳️ {participation.voted}/{participation.eligible} jugadores han votado
+                </p>
+                <div className="mt-1 h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-neutral-800">
+                  <div
+                    className="h-full rounded-full bg-lime-400"
+                    style={{
+                      width: `${participation.eligible ? Math.round((participation.voted / participation.eligible) * 100) : 0}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
             {results ? (
               <ul className="mb-3 text-sm">
                 {results.rows.map((r) => (
