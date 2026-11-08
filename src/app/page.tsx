@@ -16,6 +16,9 @@ import { myTodos, type Todo } from "@/lib/todo";
 import TodoList from "@/components/TodoList";
 import { requireProfile, type Profile } from "@/lib/session";
 import { HOME_MODE_KEY, WELCOME_KEY } from "@/lib/welcome";
+import { POLL_KEY, loadPoll } from "@/lib/polls";
+import PollCard from "@/components/PollCard";
+import Notice from "@/components/Notice";
 import { addDays, currentWeek, defaultWeek, formatWeekLong, nowInSpain } from "@/lib/weeks";
 
 type News = {
@@ -28,14 +31,22 @@ type News = {
   score_detail: string | null;
 };
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ ok?: string; error?: string }>;
+}) {
   const { supabase, profile } = await requireProfile();
+  const notice = await searchParams;
   const { data: texts } = await supabase
     .from("site_texts")
     .select("key, body")
-    .in("key", [WELCOME_KEY, HOME_MODE_KEY])
+    .in("key", [WELCOME_KEY, HOME_MODE_KEY, POLL_KEY])
     .returns<{ key: string; body: string }[]>();
-  const showNews = texts?.find((t) => t.key === HOME_MODE_KEY)?.body === "noticias";
+  const mode = texts?.find((t) => t.key === HOME_MODE_KEY)?.body;
+  const showNews = mode === "noticias";
+  // Modo encuesta: si la encuesta ya no existe, se vuelve al texto de bienvenida.
+  const poll = mode === "encuesta" ? await loadPoll(supabase, texts?.find((t) => t.key === POLL_KEY)?.body) : null;
   const text =
     texts?.find((t) => t.key === WELCOME_KEY)?.body?.trim() || "¡Bienvenidos al Torneo Pádel Loyola! 🎾";
 
@@ -65,8 +76,11 @@ export default async function Home() {
       <Header profile={profile} />
       <main className="mx-auto max-w-3xl px-4 py-6">
         {todos.length > 0 && <TodoList todos={todos} />}
+        <Notice ok={notice.ok} error={notice.error} />
 
-        {showNews ? (
+        {poll ? (
+          <PollCard poll={poll.poll} options={poll.options} votes={poll.votes} me={profile.id} now={nowInSpain()} />
+        ) : showNews ? (
           <section>
             <h1 className="mb-4 text-center text-2xl font-black uppercase italic tracking-tight">
               📰 Últimos resultados
