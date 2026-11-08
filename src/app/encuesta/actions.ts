@@ -8,6 +8,7 @@ import { requireProfile } from "@/lib/session";
 /** Vota en la encuesta del inicio, o cambia el voto mientras siga abierta. */
 export async function vote(formData: FormData) {
   const { supabase, profile } = await requireProfile();
+  if (profile.active === false) redirect("/");
   const pollId = String(formData.get("poll_id") ?? "");
   const optionId = String(formData.get("option_id") ?? "");
   if (!pollId || !optionId) redirect(`/?error=${encodeURIComponent("Elige una respuesta")}#encuesta`);

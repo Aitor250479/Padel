@@ -9,6 +9,8 @@ export type Profile = {
   pair_id: string | null;
   /** false si un organizador lo ha desactivado (undefined antes de la migración 013). */
   active?: boolean;
+  /** Eliminado: ya no tiene cuenta, pero se conserva su historia (migración 016). */
+  deleted_at?: string | null;
 };
 
 export type Pair = {
@@ -35,9 +37,10 @@ export async function requireProfile() {
     .eq("id", userId)
     .single<Profile>();
   if (!profile) redirect("/login");
-  if (profile.active === false) {
+  // Un desactivado puede entrar a consultar; uno eliminado ya no tiene cuenta.
+  if (profile.deleted_at) {
     await supabase.auth.signOut();
-    redirect(`/login?error=${encodeURIComponent("Tu cuenta está desactivada. Habla con un organizador.")}`);
+    redirect(`/login?error=${encodeURIComponent("Tu cuenta ya no existe. Habla con un organizador.")}`);
   }
 
   return { supabase, profile };

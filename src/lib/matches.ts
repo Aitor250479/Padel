@@ -41,12 +41,15 @@ export async function loadPairDirectory(supabase: SupabaseClient) {
           .map((p) => displayName(p))
           .join(" y ");
   /** Parejas en las que juega este jugador: la fija y las de liga individual. */
-  const pairsOf = (profile: Pick<Profile, "id" | "pair_id">) => [
+  const pairsOf = (profile: Pick<Profile, "id" | "pair_id" | "active">) =>
+    profile.active === false
+      ? [] // Un jugador desactivado solo consulta: no juega ningún partido.
+      : [
     ...(profile.pair_id ? [profile.pair_id] : []),
     ...leaguePairs.filter((p) => p.player_1 === profile.id || p.player_2 === profile.id).map((p) => p.id),
   ];
   /** Lado del partido en el que juega (id de pareja) o null si no juega. */
-  const sideOf = (m: Pick<Match, "pair_a" | "pair_b">, profile: Pick<Profile, "id" | "pair_id">) => {
+  const sideOf = (m: Pick<Match, "pair_a" | "pair_b">, profile: Pick<Profile, "id" | "pair_id" | "active">) => {
     const mine = pairsOf(profile);
     return mine.includes(m.pair_a) ? m.pair_a : mine.includes(m.pair_b) ? m.pair_b : null;
   };
