@@ -5,7 +5,6 @@ import type { Todo } from "@/lib/todo";
 export default function TodoList({ todos }: { todos: Todo[] }) {
   return (
     <section className="mb-6">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide opacity-70">Lo tuyo</h2>
       <ul className="flex flex-col gap-2">
         {todos.map((t) => (
           <li key={t.href + t.title}>
