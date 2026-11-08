@@ -3,6 +3,8 @@ import Header from "@/components/Header";
 import Notice from "@/components/Notice";
 import { requireOrganizer } from "@/lib/session";
 import PollOptionsFields from "@/components/PollOptionsFields";
+import SharePollButton from "@/components/SharePollButton";
+import { siteUrl } from "@/lib/site-url";
 import { formatBooking } from "@/lib/matches";
 import { POLL_KEY, loadPoll, pollOpen, pollResults } from "@/lib/polls";
 import { HOME_MODE_KEY, WELCOME_KEY, type HomeMode } from "@/lib/welcome";
@@ -147,6 +149,13 @@ export default async function BienvenidaPage({
                   <li key={o.id}>{o.label}</li>
                 ))}
               </ul>
+            )}
+            {open && (
+              <div className="mb-4">
+                <SharePollButton
+                  text={`🗳️ *¡Nueva encuesta en el Torneo Pádel Loyola!*\n*${current.poll.question}*\n⏳ Vota antes del ${formatBooking(current.poll.closes_at)} 👉 ${await siteUrl()}`}
+                />
+              </div>
             )}
             <form action={updatePollClose} className="flex flex-wrap items-center gap-2 text-sm">
               <input type="hidden" name="id" value={current.poll.id} />

@@ -2,7 +2,8 @@ import Image from "next/image";
 import SubmitButton from "@/components/SubmitButton";
 import { vote } from "@/app/encuesta/actions";
 import { formatBooking } from "@/lib/matches";
-import { pollOpen, pollResults, type Poll, type PollOption, type PollVote } from "@/lib/polls";
+import Countdown from "@/components/Countdown";
+import { madridToEpoch, pollOpen, pollResults, type Poll, type PollOption, type PollVote } from "@/lib/polls";
 
 /** Encuesta del inicio: para votar mientras está abierta y con el resultado al cerrarse. */
 export default function PollCard({
@@ -39,7 +40,7 @@ export default function PollCard({
         />
         <div className="rounded-2xl border-l-4 border-lime-400 bg-neutral-50 p-5 shadow-sm dark:bg-neutral-900">
           <h1 className="whitespace-pre-line text-xl font-bold">{poll.question}</h1>
-          <p className="mt-1 text-sm opacity-70">Abierta hasta el {closes}.</p>
+          <Countdown until={madridToEpoch(poll.closes_at)} />
           {!canVote ? (
             <ul className="mt-4 flex flex-col gap-2">
               {options.map((o) => (
