@@ -18,7 +18,7 @@ import {
   type Match,
   type ProposedResult,
 } from "@/lib/matches";
-import { requireProfile } from "@/lib/session";
+import { displayName, requireProfile } from "@/lib/session";
 import { gameField, parseGames } from "@/lib/score";
 import { RESULT_OPTIONS } from "@/lib/standings";
 import { formatWeek, formatWeekLong, nowInSpain } from "@/lib/weeks";
@@ -38,7 +38,7 @@ export default async function MatchPage({
   const { id } = await params;
   const notice = await searchParams;
 
-  const [{ data: match }, { data: proposals }, { pairs, pairName, playersOf }] = await Promise.all([
+  const [{ data: match }, { data: proposals }, { pairs, pairName, playersOf, sideOf, membersOf, isLeaguePair, players }] = await Promise.all([
     supabase.from("matches").select(MATCH_COLUMNS).eq("id", id).maybeSingle<Match>(),
     supabase
       .from("match_results")
@@ -49,8 +49,13 @@ export default async function MatchPage({
   ]);
   if (!match) notFound();
 
-  const myPair = profile.pair_id;
-  const isPlayer = !!myPair && [match.pair_a, match.pair_b].includes(myPair);
+  const myPair = sideOf(match, profile);
+  const isPlayer = !!myPair;
+  // Partido de liga individual: sus parejas se forman con 4 jugadores sueltos.
+  const individualMatch = isLeaguePair(match.pair_a) || isLeaguePair(match.pair_b);
+  const activePlayers = players
+    .filter((p) => p.active !== false)
+    .sort((x, y) => displayName(x).localeCompare(displayName(y)));
   const canEdit = isPlayer || profile.is_organizer;
   const booking = formatBooking(match.booking_at);
   const open = resultOpen(match, nowInSpain());
@@ -76,7 +81,7 @@ export default async function MatchPage({
           {pairName(match.pair_a)} <span className="opacity-60">vs</span> {pairName(match.pair_b)}
         </h1>
         <p className="mb-4 text-sm opacity-70">
-          {playersOf(match.pair_a) || "—"} contra {playersOf(match.pair_b) || "—"}
+          {individualMatch ? "Liga individual" : `${playersOf(match.pair_a) || "—"} contra ${playersOf(match.pair_b) || "—"}`}
           {cancelled && " · CANCELADO"}
         </p>
 
@@ -216,17 +221,44 @@ export default async function MatchPage({
             <h2 className="mb-2 font-semibold">Cambiar emparejamiento (organizador)</h2>
             <form action={updateMatch} className="flex flex-col gap-2 text-sm">
               <input type="hidden" name="id" value={match.id} />
-              <div className="flex flex-wrap gap-2">
-                {(["pair_a", "pair_b"] as const).map((name) => (
-                  <select key={name} name={name} defaultValue={match[name]} className={input}>
-                    {pairs.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                ))}
-              </div>
+              {individualMatch ? (
+                <>
+                  <input type="hidden" name="pair_a" value={match.pair_a} />
+                  <input type="hidden" name="pair_b" value={match.pair_b} />
+                  {(["a", "b"] as const).map((side) => {
+                    const members = membersOf(side === "a" ? match.pair_a : match.pair_b);
+                    return (
+                      <div key={side} className="flex flex-wrap items-center gap-2">
+                        <span className="w-16 font-semibold">Pareja {side.toUpperCase()}</span>
+                        {[0, 1].map((n) => (
+                          <select key={n} name={`${side}${n + 1}`} defaultValue={members[n] ?? ""} className={input}>
+                            <option value="" disabled>
+                              Jugador
+                            </option>
+                            {activePlayers.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {displayName(p)}
+                              </option>
+                            ))}
+                          </select>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {(["pair_a", "pair_b"] as const).map((name) => (
+                    <select key={name} name={name} defaultValue={match[name]} className={input}>
+                      {pairs.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  ))}
+                </div>
+              )}
               <label>
                 Estado{" "}
                 <select name="status" defaultValue={cancelled ? "cancelado" : match.status} className={input}>

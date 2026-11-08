@@ -1,8 +1,19 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type League = { id: string; name: string; started_at: string; ended_at: string | null };
+export type LeagueKind = "parejas" | "individual";
 
-export const LEAGUE_COLUMNS = "id, name, started_at, ended_at";
+export type League = {
+  id: string;
+  name: string;
+  started_at: string;
+  ended_at: string | null;
+  /** Por parejas fijas o individual (parejas nuevas cada semana). Migración 014. */
+  kind?: LeagueKind;
+};
+
+export const LEAGUE_COLUMNS = "id, name, started_at, ended_at, kind";
+
+export const isIndividual = (league: League | null | undefined) => league?.kind === "individual";
 
 /** Liga en curso (o null si todavía no se ha ejecutado la migración de ligas). */
 export async function currentLeague(supabase: SupabaseClient) {

@@ -121,7 +121,7 @@ export async function applyRandomPairs(formData: FormData) {
   }
 
   const [{ data: pairs }, { data: players }] = await Promise.all([
-    supabase.from("pairs").select("id, name"),
+    supabase.from("pairs").select("id, name").is("league_id", null),
     supabase.from("profiles").select("*").in("id", ids),
   ]);
   if ((players ?? []).length !== ids.length) {

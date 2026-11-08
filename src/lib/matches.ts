@@ -21,20 +21,42 @@ export const MATCH_COLUMNS =
 
 /** Nombres de parejas y de sus jugadores, para mostrar partidos. */
 export async function loadPairDirectory(supabase: SupabaseClient) {
-  const [{ data: pairs }, { data: players }] = await Promise.all([
-    supabase.from("pairs").select("id, name").order("name").returns<Pair[]>(),
+  const [{ data: allPairs }, { data: players }] = await Promise.all([
+    supabase.from("pairs").select("id, name, league_id, player_1, player_2").order("name").returns<Pair[]>(),
     supabase
       .from("profiles")
-      .select("id, email, full_name, is_organizer, pair_id")
+      .select("id, email, full_name, is_organizer, pair_id, active")
       .returns<Profile[]>(),
   ]);
-  const pairName = (id: string) => pairs?.find((p) => p.id === id)?.name ?? "Pareja borrada";
+  // Parejas fijas (las de Parejas) y parejas de un partido de liga individual.
+  const pairs = (allPairs ?? []).filter((p) => !p.league_id);
+  const leaguePairs = (allPairs ?? []).filter((p) => p.league_id);
+  const pairName = (id: string) => allPairs?.find((p) => p.id === id)?.name ?? "Pareja borrada";
+  // En la liga individual el nombre de la pareja ya son sus jugadores.
   const playersOf = (id: string) =>
-    (players ?? [])
-      .filter((p) => p.pair_id === id)
-      .map((p) => displayName(p))
-      .join(" y ");
-  return { pairs: pairs ?? [], pairName, playersOf };
+    leaguePairs.some((p) => p.id === id)
+      ? ""
+      : (players ?? [])
+          .filter((p) => p.pair_id === id)
+          .map((p) => displayName(p))
+          .join(" y ");
+  /** Parejas en las que juega este jugador: la fija y las de liga individual. */
+  const pairsOf = (profile: Pick<Profile, "id" | "pair_id">) => [
+    ...(profile.pair_id ? [profile.pair_id] : []),
+    ...leaguePairs.filter((p) => p.player_1 === profile.id || p.player_2 === profile.id).map((p) => p.id),
+  ];
+  /** Lado del partido en el que juega (id de pareja) o null si no juega. */
+  const sideOf = (m: Pick<Match, "pair_a" | "pair_b">, profile: Pick<Profile, "id" | "pair_id">) => {
+    const mine = pairsOf(profile);
+    return mine.includes(m.pair_a) ? m.pair_a : mine.includes(m.pair_b) ? m.pair_b : null;
+  };
+  const membersOf = (id: string) => {
+    const lp = leaguePairs.find((p) => p.id === id);
+    if (lp) return [lp.player_1, lp.player_2].filter((x): x is string => !!x);
+    return (players ?? []).filter((p) => p.pair_id === id).map((p) => p.id);
+  };
+  const isLeaguePair = (id: string) => leaguePairs.some((p) => p.id === id);
+  return { pairs, pairName, playersOf, pairsOf, sideOf, membersOf, isLeaguePair, players: players ?? [] };
 }
 
 const WEEKDAYS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];

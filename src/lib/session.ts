@@ -11,7 +11,14 @@ export type Profile = {
   active?: boolean;
 };
 
-export type Pair = { id: string; name: string };
+export type Pair = {
+  id: string;
+  name: string;
+  /** Solo en las parejas de una liga individual (migración 014). */
+  league_id?: string | null;
+  player_1?: string | null;
+  player_2?: string | null;
+};
 
 /** Usuario conectado y su perfil. Redirige a /login si no hay sesión. */
 export async function requireProfile() {

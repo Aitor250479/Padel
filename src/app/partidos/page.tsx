@@ -6,7 +6,7 @@ import ResultFields from "@/components/ResultFields";
 import WhatsAppLink from "@/components/WhatsAppLink";
 import { weekMessage } from "@/lib/share";
 import { siteUrl } from "@/lib/site-url";
-import { availablePairIds } from "@/lib/availability";
+import { availablePairIds, availablePlayerIds } from "@/lib/availability";
 import {
   MATCH_COLUMNS,
   PROPOSED_COLUMNS,
@@ -17,8 +17,8 @@ import {
   type Match,
   type ProposedResult,
 } from "@/lib/matches";
-import { currentLeague, onlyLeague } from "@/lib/leagues";
-import { requireProfile } from "@/lib/session";
+import { currentLeague, isIndividual, onlyLeague } from "@/lib/leagues";
+import { displayName, requireProfile } from "@/lib/session";
 import { addDays, currentWeek, formatWeek, formatWeekLong, nowInSpain, parseWeek, weekLabel, weeksFromNow } from "@/lib/weeks";
 import { confirmResultAsOrganizer, createMatch, generatePairings } from "./actions";
 import { RESULT_OPTIONS } from "@/lib/standings";
@@ -39,12 +39,13 @@ export default async function PartidosPage({
   const now = nowInSpain();
 
   const league = await currentLeague(supabase);
-  const [{ pairs, pairName, playersOf }, { data: matches }, available] = await Promise.all([
+  const individual = isIndividual(league);
+  const [{ pairs, pairName, playersOf, sideOf, membersOf, players }, { data: matches }, available] = await Promise.all([
     loadPairDirectory(supabase),
     onlyLeague(supabase.from("matches").select(MATCH_COLUMNS).eq("week_start", weekStart), league)
       .order("booking_at", { nullsFirst: false })
       .returns<Match[]>(),
-    availablePairIds(supabase, weekStart),
+    individual ? availablePlayerIds(supabase, weekStart) : availablePairIds(supabase, weekStart),
   ]);
   const ids = (matches ?? []).map((m) => m.id);
   const { data: proposals } = ids.length
@@ -81,7 +82,11 @@ export default async function PartidosPage({
   const active = (matches ?? []).filter((m) => m.status !== "cancelado");
   const busy = new Set(active.flatMap((m) => [m.pair_a, m.pair_b]));
   const availableSet = new Set(available);
-  const free = pairs.filter((p) => !busy.has(p.id));
+  const free = individual ? [] : pairs.filter((p) => !busy.has(p.id));
+  // Liga individual: jugadores que ya juegan esta semana y los que quedan libres.
+  const busyPlayers = new Set([...busy].flatMap((id) => membersOf(id)));
+  const activePlayers = players.filter((p) => p.active !== false).sort((x, y) => displayName(x).localeCompare(displayName(y)));
+  const freePlayers = individual ? activePlayers.filter((p) => !busyPlayers.has(p.id)) : [];
 
   const arrow =
     "grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 border-lime-400 text-xl font-bold";
@@ -121,7 +126,7 @@ export default async function PartidosPage({
         ) : (
           <ul className="mb-6 flex flex-col gap-2">
             {(matches ?? []).map((m) => {
-              const mine = !!profile.pair_id && [m.pair_a, m.pair_b].includes(profile.pair_id);
+              const mine = sideOf(m, profile) !== null;
               const booking = formatBooking(m.booking_at);
               const status = resultStatus(m, proposals ?? [], pairName);
               const showResult = status.tone === "ok" || (proposals ?? []).some((p) => p.match_id === m.id) || resultOpen(m, now);
@@ -140,9 +145,11 @@ export default async function PartidosPage({
                       {mine && <span className="ml-2 text-xs text-emerald-600">tu partido</span>}
                       {m.status === "cancelado" && <span className="ml-2 text-xs">cancelado</span>}
                     </p>
-                    <p className="text-xs opacity-70">
-                      {playersOf(m.pair_a) || "—"} · {playersOf(m.pair_b) || "—"}
-                    </p>
+                    {(playersOf(m.pair_a) || playersOf(m.pair_b)) && (
+                      <p className="text-xs opacity-70">
+                        {playersOf(m.pair_a) || "—"} · {playersOf(m.pair_b) || "—"}
+                      </p>
+                    )}
                     {m.status !== "cancelado" && (
                       <>
                         <p className="mt-1 text-sm">
@@ -192,6 +199,22 @@ export default async function PartidosPage({
                   {p.name}{" "}
                   <span className="opacity-60">
                     {availableSet.has(p.id) ? "· pueden jugar" : "· no pueden o falta que respondan"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {freePlayers.length > 0 && (
+          <section className="mb-6 text-sm">
+            <h2 className="mb-1 font-semibold">Jugadores sin partido esta semana ({freePlayers.length})</h2>
+            <ul>
+              {freePlayers.map((p) => (
+                <li key={p.id}>
+                  {displayName(p)}{" "}
+                  <span className="opacity-60">
+                    {availableSet.has(p.id) ? "· puede jugar" : "· no puede o falta que responda"}
                   </span>
                 </li>
               ))}
@@ -273,14 +296,50 @@ export default async function PartidosPage({
                 Generar emparejamientos
               </SubmitButton>
             </form>
-            <p className="mb-4 text-xs opacity-70">
-              Empareja al azar a las parejas sin partido en las que los dos jugadores pueden jugar
-              esta semana ({free.filter((p) => availableSet.has(p.id)).length} ahora mismo),
-              priorizando como rival a quien menos partidos lleva. Si son impares, descansa la que
-              más partidos lleva. Los partidos ya creados no se tocan.
-            </p>
+            {individual ? (
+              <p className="mb-4 text-xs opacity-70">
+                Liga individual: forma parejas nuevas con los jugadores sin partido que pueden jugar
+                esta semana ({freePlayers.filter((p) => availableSet.has(p.id)).length} ahora mismo),
+                procurando que nadie repita compañero y, después, que no repita rivales. Juegan de 4
+                en 4; si sobran, descansan los que más partidos llevan. Los partidos ya creados no se
+                tocan.
+              </p>
+            ) : (
+              <p className="mb-4 text-xs opacity-70">
+                Empareja al azar a las parejas sin partido en las que los dos jugadores pueden jugar
+                esta semana ({free.filter((p) => availableSet.has(p.id)).length} ahora mismo),
+                priorizando como rival a quien menos partidos lleva. Si son impares, descansa la que
+                más partidos lleva. Los partidos ya creados no se tocan.
+              </p>
+            )}
 
             <h3 className="mb-1 text-sm font-semibold">Crear partido a mano</h3>
+            {individual ? (
+              <form action={createMatch} className="flex flex-col gap-2">
+                <input type="hidden" name="week_start" value={weekStart} />
+                {(["a", "b"] as const).map((side) => (
+                  <div key={side} className="flex flex-wrap items-center gap-2">
+                    <span className="w-16 text-sm font-semibold">Pareja {side.toUpperCase()}</span>
+                    {[1, 2].map((n) => (
+                      <select key={n} name={`${side}${n}`} defaultValue="" className={input}>
+                        <option value="" disabled>
+                          Jugador
+                        </option>
+                        {activePlayers.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {displayName(p)}
+                            {busyPlayers.has(p.id) ? " (ya tiene partido)" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    ))}
+                  </div>
+                ))}
+                <SubmitButton pendingText="Creando…" className="self-start rounded-lg bg-gray-800 px-3 py-1 text-sm font-semibold text-white">
+                  Crear
+                </SubmitButton>
+              </form>
+            ) : (
             <form action={createMatch} className="flex flex-wrap gap-2">
               <input type="hidden" name="week_start" value={weekStart} />
               {(["pair_a", "pair_b"] as const).map((name) => (
@@ -300,6 +359,7 @@ export default async function PartidosPage({
                 Crear
               </SubmitButton>
             </form>
+            )}
           </section>
         )}
       </main>

@@ -13,6 +13,8 @@ export type Todo = {
 
 export type TodoInput = {
   myPair: string;
+  /** Liga individual: la pareja con la que juega en cada partido (si no, myPair). */
+  mySide?: (m: Match) => string;
   thisWeek: string;
   nextWeek: string;
   /** Partidos de su pareja en la liga en curso, sin resultado confirmado y no cancelados. */
@@ -30,7 +32,8 @@ export type TodoInput = {
 
 export function myTodos(i: TodoInput): Todo[] {
   const todos: Todo[] = [];
-  const rivalOf = (m: Match) => (m.pair_a === i.myPair ? m.pair_b : m.pair_a);
+  const me = (m: Match) => i.mySide?.(m) ?? i.myPair;
+  const rivalOf = (m: Match) => (m.pair_a === me(m) ? m.pair_b : m.pair_a);
   const rivalText = (m: Match) => {
     const r = rivalOf(m);
     const players = i.playersOf(r);
@@ -41,8 +44,8 @@ export function myTodos(i: TodoInput): Todo[] {
   // 1. Resultados por poner o confirmar (partidos ya jugados).
   for (const m of byWeek.filter((m) => i.isOpen(m))) {
     const props = i.proposals.filter((p) => p.match_id === m.id);
-    const mine = props.find((p) => p.pair_id === i.myPair);
-    const theirs = props.find((p) => p.pair_id !== i.myPair);
+    const mine = props.find((p) => p.pair_id === me(m));
+    const theirs = props.find((p) => p.pair_id !== me(m));
     const href = `/partidos/${m.id}`;
     const rival = i.pairName(rivalOf(m));
     if (!mine && !theirs) {
