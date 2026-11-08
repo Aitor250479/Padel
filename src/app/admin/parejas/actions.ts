@@ -181,7 +181,10 @@ export async function createPlayer(formData: FormData) {
   });
 }
 
-/** Desactiva o reactiva un jugador. Desactivado: sale de su pareja y no puede entrar. */
+/**
+ * Desactiva o reactiva un jugador. Desactivado: sale de su pareja, no juega ni
+ * marca disponibilidad, pero puede entrar a consultar.
+ */
 export async function setPlayerActive(formData: FormData) {
   const { supabase, profile } = await requireOrganizer();
   const playerId = String(formData.get("player_id"));
@@ -192,19 +195,22 @@ export async function setPlayerActive(formData: FormData) {
   const { error } = await supabase.from("profiles").update({ active }).eq("id", playerId);
   if (error) return done(path, { error });
 
-  // Además se bloquea (o desbloquea) su acceso, para que no pueda seguir dentro.
+  // Antes se le bloqueaba la entrada; ahora puede entrar a consultar.
   const admin = adminClient();
-  if (admin) {
-    await admin.auth.admin.updateUserById(playerId, { ban_duration: active ? "none" : "876000h" });
+  if (admin && active) {
+    await admin.auth.admin.updateUserById(playerId, { ban_duration: "none" });
   }
   done(path, {
     ok: active
       ? "Jugador reactivado. Ya puede entrar en la web; asígnale pareja si hace falta."
-      : "Jugador desactivado. Ha salido de su pareja y no entrará en los sorteos ni podrá entrar en la web.",
+      : "Jugador desactivado. Ha salido de su pareja y no entrará en los sorteos; podrá entrar en la web solo para consultar.",
   });
 }
 
-/** Elimina del todo un jugador desactivado (su cuenta y su perfil). */
+/**
+ * Elimina un jugador desactivado: se borra su cuenta (ya no puede entrar), pero
+ * su ficha queda marcada como eliminada para conservar sus estadísticas.
+ */
 export async function deletePlayer(formData: FormData) {
   const { supabase, profile } = await requireOrganizer();
   const playerId = String(formData.get("player_id"));
@@ -217,6 +223,11 @@ export async function deletePlayer(formData: FormData) {
 
   const admin = adminClient();
   if (!admin) return done(path, { error: { message: MISSING_ADMIN_KEY } });
+  const { error: markError } = await supabase
+    .from("profiles")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", playerId);
+  if (markError) return done(path, { error: markError });
   const { error } = await admin.auth.admin.deleteUser(playerId);
   if (error) return done(path, { error });
   done("/admin/parejas", { ok: "Jugador eliminado." });

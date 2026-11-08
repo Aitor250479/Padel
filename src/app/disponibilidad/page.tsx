@@ -1,5 +1,6 @@
 import SubmitButton from "@/components/SubmitButton";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
 import { currentLeague, isIndividual } from "@/lib/leagues";
@@ -15,6 +16,7 @@ export default async function DisponibilidadPage({
   searchParams: Promise<{ semana?: string; error?: string }>;
 }) {
   const { supabase, profile } = await requireProfile();
+  if (profile.active === false) redirect("/");
   // No se puede ir a semanas pasadas: como mínimo, la semana en curso.
   const thisWeek = currentWeek();
   const params = await searchParams;

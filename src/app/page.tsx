@@ -38,6 +38,8 @@ export default async function Home({
 }) {
   const { supabase, profile } = await requireProfile();
   const notice = await searchParams;
+  // Desactivado: entra a consultar, con su imagen arriba y sin tareas pendientes.
+  const inactive = profile.active === false;
   const { data: texts } = await supabase
     .from("site_texts")
     .select("key, body")
@@ -53,7 +55,7 @@ export default async function Home({
   const [league, directory] = await Promise.all([currentLeague(supabase), loadPairDirectory(supabase)]);
   // Lo pendiente del jugador y las noticias se cargan a la vez.
   const [todos, news] = await Promise.all([
-    directory.pairsOf(profile).length || isIndividual(league)
+    profile.active !== false && (directory.pairsOf(profile).length || isIndividual(league))
       ? loadTodos(supabase, profile, directory.pairsOf(profile), league, directory)
       : Promise.resolve([]),
     showNews
@@ -75,11 +77,28 @@ export default async function Home({
     <>
       <Header profile={profile} />
       <main className="mx-auto max-w-3xl px-4 py-6">
+        {inactive && (
+          <Image
+            src="/jugadordesactivado.png"
+            alt="¡Te echamos de menos! ¿Cuándo te animas a jugar?"
+            width={1200}
+            height={400}
+            className="mb-6 h-auto w-full"
+            priority
+          />
+        )}
         {todos.length > 0 && <TodoList todos={todos} />}
         <Notice ok={notice.ok} error={notice.error} />
 
         {poll ? (
-          <PollCard poll={poll.poll} options={poll.options} votes={poll.votes} me={profile.id} now={nowInSpain()} />
+          <PollCard
+            poll={poll.poll}
+            options={poll.options}
+            votes={poll.votes}
+            me={profile.id}
+            now={nowInSpain()}
+            canVote={!inactive}
+          />
         ) : showNews ? (
           <section>
             <h1 className="mb-4 text-center text-2xl font-black uppercase italic tracking-tight">
@@ -114,7 +133,7 @@ export default async function Home({
           </section>
         )}
 
-        {((!profile.pair_id && !isIndividual(league)) || !profile.full_name) && (
+        {!inactive && ((!profile.pair_id && !isIndividual(league)) || !profile.full_name) && (
           <div className="mt-4 flex flex-col gap-1 text-sm opacity-80">
             {!profile.pair_id && !isIndividual(league) && <p>Todavía no tienes pareja asignada. Un organizador te la asignará pronto.</p>}
             {!profile.full_name && (

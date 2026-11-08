@@ -8,6 +8,7 @@ import { currentWeek, parseWeek } from "@/lib/weeks";
 
 export async function setAvailability(formData: FormData) {
   const { supabase, profile } = await requireProfile();
+  if (profile.active === false) redirect("/");
   const weekStart = parseWeek(String(formData.get("week_start") ?? ""));
   const value = String(formData.get("can_play"));
   if (weekStart < currentWeek()) return; // semanas pasadas: no se cambian

@@ -28,7 +28,8 @@ export default async function ParejasPage({
 
   const playersOf = (pairId: string) => (players ?? []).filter((p) => p.pair_id === pairId);
   const active = (players ?? []).filter((p) => p.active !== false);
-  const inactive = (players ?? []).filter((p) => p.active === false);
+  // Los eliminados ya no salen: solo se conservan para las estadísticas.
+  const inactive = (players ?? []).filter((p) => p.active === false && !p.deleted_at);
   // En la liga individual no hay parejas fijas: se listan todos los jugadores activos.
   const unassigned = individual ? active : active.filter((p) => !p.pair_id);
 
@@ -161,8 +162,8 @@ export default async function ParejasPage({
           <section>
             <h2 className="mb-1 text-lg font-semibold">Jugadores desactivados ({inactive.length})</h2>
             <p className="mb-3 text-sm opacity-70">
-              No pueden entrar en la web ni entran en parejas ni sorteos. Entra en uno para reactivarlo o
-              eliminarlo.
+              Pueden entrar en la web solo para consultar (partidos, clasificación y encuestas), pero no
+              juegan ni entran en parejas ni sorteos. Entra en uno para reactivarlo o eliminarlo.
             </p>
             <ul className="grid gap-2 sm:grid-cols-2">
               {inactive.map((p) => (

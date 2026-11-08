@@ -11,12 +11,15 @@ export default function PollCard({
   votes,
   me,
   now,
+  canVote = true,
 }: {
   poll: Poll;
   options: PollOption[];
   votes: PollVote[];
   me: string;
   now: string;
+  /** false para un jugador desactivado: ve la encuesta pero no vota. */
+  canVote?: boolean;
 }) {
   const open = pollOpen(poll, now);
   const mine = votes.find((v) => v.profile_id === me)?.option_id;
@@ -37,6 +40,16 @@ export default function PollCard({
         <div className="rounded-2xl border-l-4 border-lime-400 bg-neutral-50 p-5 shadow-sm dark:bg-neutral-900">
           <h1 className="whitespace-pre-line text-xl font-bold">{poll.question}</h1>
           <p className="mt-1 text-sm opacity-70">Abierta hasta el {closes}.</p>
+          {!canVote ? (
+            <ul className="mt-4 flex flex-col gap-2">
+              {options.map((o) => (
+                <li key={o.id} className="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-neutral-950">
+                  {o.label}
+                </li>
+              ))}
+            </ul>
+          ) : (
+          <>
           <p
             className={[
               "mt-3 rounded-lg p-2 text-sm font-semibold",
@@ -60,6 +73,8 @@ export default function PollCard({
               {mine ? "Cambiar mi voto" : "Votar"}
             </SubmitButton>
           </form>
+          </>
+          )}
           <p className="mt-3 text-xs opacity-60">
             Los votos de los demás no se ven hasta que se cierre la encuesta.
           </p>

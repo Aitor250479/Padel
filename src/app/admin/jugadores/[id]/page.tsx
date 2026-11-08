@@ -35,7 +35,7 @@ export default async function PlayerPage({
       .maybeSingle<Profile>(),
     supabase.from("pairs").select("id, name").is("league_id", null).order("name").returns<Pair[]>(),
   ]);
-  if (!player) notFound();
+  if (!player || player.deleted_at) notFound();
 
   const pair = (pairs ?? []).find((p) => p.id === player.pair_id);
   const back = `/admin/jugadores/${player.id}`;
@@ -178,14 +178,15 @@ export default async function PlayerPage({
             <section className={card}>
               <h2 className="mb-1 font-semibold">Desactivar jugador</h2>
               <p className="mb-3 text-sm opacity-70">
-                Sale de su pareja, deja de entrar en los sorteos y no podrá entrar en la web. Sus partidos y
-                estadísticas se conservan. Puedes reactivarlo cuando quieras.
+                Sale de su pareja y deja de jugar y de entrar en los sorteos. Podrá entrar en la web solo para
+                consultar partidos, clasificación y encuestas. Sus partidos y estadísticas se conservan. Puedes
+                reactivarlo cuando quieras.
               </p>
               <form action={setPlayerActive}>
                 <input type="hidden" name="player_id" value={player.id} />
                 <input type="hidden" name="active" value="false" />
                 <ConfirmButton
-                  message={`${displayName(player)} saldrá de su pareja y no podrá entrar en la web. ¿Desactivarlo?`}
+                  message={`${displayName(player)} saldrá de su pareja y solo podrá entrar a consultar. ¿Desactivarlo?`}
                   pendingText="Desactivando…"
                   className="rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-700"
                 >
@@ -199,8 +200,8 @@ export default async function PlayerPage({
             <section className={card}>
               <h2 className="mb-1 font-semibold">Reactivar o eliminar</h2>
               <p className="mb-3 text-sm opacity-70">
-                Si lo reactivas podrá volver a entrar y tendrás que asignarle pareja. Si lo eliminas, se borra su
-                cuenta para siempre.
+                Si lo reactivas volverá a jugar y tendrás que asignarle pareja. Si lo eliminas, se borra su
+                cuenta para siempre y ya no podrá entrar; sus partidos y estadísticas se conservan.
               </p>
               <div className="flex flex-wrap gap-2">
                 <form action={setPlayerActive}>
@@ -213,7 +214,7 @@ export default async function PlayerPage({
                 <form action={deletePlayer}>
                   <input type="hidden" name="player_id" value={player.id} />
                   <ConfirmButton
-                    message={`Se borrará la cuenta de ${displayName(player)} para siempre y no se puede deshacer. ¿Eliminarlo?`}
+                    message={`Se borrará la cuenta de ${displayName(player)} para siempre (sus estadísticas se conservan) y no se puede deshacer. ¿Eliminarlo?`}
                     pendingText="Eliminando…"
                     className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
                   >
