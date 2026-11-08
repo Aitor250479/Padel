@@ -56,6 +56,45 @@ export function computeStandings(pairIds: string[], matches: ResultRow[]): Stand
   );
 }
 
+export type MatchPlayerRow = { match_id: string; profile_id: string; pair_id: string };
+
+export type PlayerStanding = Omit<Standing, "pairId"> & { playerId: string };
+
+/**
+ * Clasificación individual: cada jugador suma lo que sumó su pareja en los
+ * partidos que jugó (según quién formaba la pareja cuando se confirmó el resultado).
+ * Mismos puntos y mismo orden que la clasificación por parejas.
+ */
+export function computePlayerStandings(
+  playerIds: string[],
+  matches: (ResultRow & { id: string })[],
+  players: MatchPlayerRow[],
+): PlayerStanding[] {
+  const ids = new Set(playerIds);
+  const byMatch = new Map<string, MatchPlayerRow[]>();
+  for (const p of players) {
+    if (!byMatch.has(p.match_id)) byMatch.set(p.match_id, []);
+    byMatch.get(p.match_id)!.push(p);
+  }
+  // Una "pareja" virtual por jugador: reutiliza el cálculo de parejas.
+  const virtual: ResultRow[] = [];
+  for (const m of matches) {
+    for (const p of byMatch.get(m.id) ?? []) {
+      ids.add(p.profile_id);
+      const isA = p.pair_id === m.pair_a;
+      if (!isA && p.pair_id !== m.pair_b) continue;
+      virtual.push({
+        pair_a: p.profile_id,
+        pair_b: `rival:${m.id}:${p.profile_id}`,
+        sets_a: isA ? m.sets_a : m.sets_b,
+        sets_b: isA ? m.sets_b : m.sets_a,
+        status: m.status,
+      });
+    }
+  }
+  return computeStandings([...ids], virtual).map(({ pairId, ...r }) => ({ playerId: pairId, ...r }));
+}
+
 export const RESULT_OPTIONS: { value: string; a: number; b: number }[] = [
   { value: "2-0", a: 2, b: 0 },
   { value: "2-1", a: 2, b: 1 },

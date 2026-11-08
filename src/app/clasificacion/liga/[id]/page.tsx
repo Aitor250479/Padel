@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import StandingsTable from "@/components/StandingsTable";
-import { leagueStandings } from "@/lib/league-data";
+import StandingsTabs from "@/components/StandingsTabs";
+import { leaguePlayerStandings, leagueStandings } from "@/lib/league-data";
 import { LEAGUE_COLUMNS, type League } from "@/lib/leagues";
 import { loadPairDirectory } from "@/lib/matches";
 import { requireProfile } from "@/lib/session";
@@ -11,15 +12,23 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Madrid" });
 }
 
-export default async function LeaguePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function LeaguePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ vista?: string }>;
+}) {
   const { supabase, profile } = await requireProfile();
   const { id } = await params;
+  const individual = (await searchParams).vista === "jugadores";
   const [{ data: league }, { pairName }] = await Promise.all([
     supabase.from("leagues").select(LEAGUE_COLUMNS).eq("id", id).maybeSingle<League>(),
     loadPairDirectory(supabase),
   ]);
   if (!league) notFound();
-  const { rows } = await leagueStandings(supabase, league, [], { onlyPlayed: true });
+  const { rows, matches } = await leagueStandings(supabase, league, [], { onlyPlayed: true });
+  const players = individual ? await leaguePlayerStandings(supabase, matches) : null;
   const champion = league.ended_at && rows[0]?.played ? rows[0] : null;
 
   return (
@@ -37,14 +46,26 @@ export default async function LeaguePage({ params }: { params: Promise<{ id: str
         </p>
         {champion && (
           <p className="mb-4 rounded-xl bg-lime-100 p-3 text-center font-semibold text-neutral-900">
-            🏆 Campeones: {pairName(champion.pairId)} con {champion.points} puntos
+            🏆 Campeones: {pairName(champion.id)} con {champion.points} puntos
           </p>
         )}
-        {rows.length ? (
+        {rows.length > 0 && <StandingsTabs base={`/clasificacion/liga/${league.id}`} players={individual} />}
+        {players ? (
+          <>
+            <StandingsTable
+              rows={players.rows}
+              nameOf={players.nameOf}
+              label="Jugador"
+              highlight={profile.id}
+              hrefFor={(pid) => `/jugadores/${pid}/estadisticas`}
+            />
+            <p className="mt-2 text-xs opacity-60">Pulsa en un jugador para ver sus estadísticas.</p>
+          </>
+        ) : rows.length ? (
           <>
             <StandingsTable
               rows={rows}
-              pairName={pairName}
+              nameOf={pairName}
               highlight={profile.pair_id}
               hrefFor={(pairId) => `/clasificacion/liga/${league.id}/pareja/${pairId}`}
             />

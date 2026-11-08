@@ -4,7 +4,8 @@ import ConfirmButton from "@/components/ConfirmButton";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
 import StandingsTable from "@/components/StandingsTable";
-import { leagueStandings } from "@/lib/league-data";
+import StandingsTabs from "@/components/StandingsTabs";
+import { leaguePlayerStandings, leagueStandings } from "@/lib/league-data";
 import { LEAGUE_COLUMNS, type League } from "@/lib/leagues";
 import { loadPairDirectory } from "@/lib/matches";
 import { requireProfile } from "@/lib/session";
@@ -19,21 +20,23 @@ function formatDate(iso: string) {
 export default async function ClasificacionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ok?: string; error?: string }>;
+  searchParams: Promise<{ ok?: string; error?: string; vista?: string }>;
 }) {
   const { supabase, profile } = await requireProfile();
-  const { ok, error } = await searchParams;
+  const { ok, error, vista } = await searchParams;
+  const individual = vista === "jugadores";
   const [{ pairs, pairName }, { data: leagues }] = await Promise.all([
     loadPairDirectory(supabase),
     supabase.from("leagues").select(LEAGUE_COLUMNS).order("started_at", { ascending: false }).returns<League[]>(),
   ]);
   const current = (leagues ?? []).find((l) => !l.ended_at) ?? null;
   const previous = (leagues ?? []).filter((l) => l.ended_at);
-  const { rows } = await leagueStandings(
+  const { rows, matches } = await leagueStandings(
     supabase,
     current,
     pairs.map((p) => p.id),
   );
+  const players = individual ? await leaguePlayerStandings(supabase, matches, { includeCurrentPlayers: true }) : null;
 
   return (
     <>
@@ -46,13 +49,32 @@ export default async function ClasificacionPage({
           </p>
         )}
         <Notice ok={ok} error={error} />
-        <StandingsTable
-          rows={rows}
-          pairName={pairName}
-          highlight={profile.pair_id}
-          hrefFor={current ? (id) => `/clasificacion/liga/${current.id}/pareja/${id}` : undefined}
-        />
-        {current && <p className="mt-2 text-xs opacity-60">Pulsa en una pareja para ver sus partidos.</p>}
+        <StandingsTabs base="/clasificacion" players={individual} />
+        {players ? (
+          <>
+            <StandingsTable
+              rows={players.rows}
+              nameOf={players.nameOf}
+              label="Jugador"
+              highlight={profile.id}
+              hrefFor={(id) => `/jugadores/${id}/estadisticas`}
+            />
+            <p className="mt-2 text-xs opacity-60">
+              Cada jugador suma los puntos de los partidos que ha jugado, con la pareja que tenía en
+              cada partido. Pulsa en un jugador para ver sus estadísticas.
+            </p>
+          </>
+        ) : (
+          <>
+            <StandingsTable
+              rows={rows}
+              nameOf={pairName}
+              highlight={profile.pair_id}
+              hrefFor={current ? (id) => `/clasificacion/liga/${current.id}/pareja/${id}` : undefined}
+            />
+            {current && <p className="mt-2 text-xs opacity-60">Pulsa en una pareja para ver sus partidos.</p>}
+          </>
+        )}
 
         <div className="mt-4 text-xs opacity-70">
           <p className="font-semibold">

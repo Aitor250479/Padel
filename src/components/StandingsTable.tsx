@@ -1,16 +1,21 @@
 import Link from "next/link";
 import type { Standing } from "@/lib/standings";
 
+type Row = Omit<Standing, "pairId"> & { id: string; note?: string };
+
+/** Tabla de clasificación, de parejas o de jugadores. */
 export default function StandingsTable({
   rows,
-  pairName,
+  nameOf,
   hrefFor,
   highlight,
+  label = "Pareja",
 }: {
-  rows: Standing[];
-  pairName: (id: string) => string;
-  hrefFor?: (pairId: string) => string;
+  rows: Row[];
+  nameOf: (id: string) => string;
+  hrefFor?: (id: string) => string;
   highlight?: string | null;
+  label?: string;
 }) {
   return (
     <div className="overflow-x-auto">
@@ -18,7 +23,7 @@ export default function StandingsTable({
         <thead>
           <tr className="border-b border-gray-300 text-left dark:border-gray-700">
             <th className="py-2 pr-2">#</th>
-            <th className="py-2 pr-2">Pareja</th>
+            <th className="py-2 pr-2">{label}</th>
             <th className="px-1 text-center" title="Partidos jugados">PJ</th>
             <th className="px-1 text-center" title="Ganados">G</th>
             <th className="px-1 text-center" title="Empatados">E</th>
@@ -30,21 +35,22 @@ export default function StandingsTable({
         <tbody>
           {rows.map((r, i) => (
             <tr
-              key={r.pairId}
+              key={r.id}
               className={[
                 "border-b border-gray-100 dark:border-gray-900",
-                r.pairId === highlight ? "bg-emerald-50 dark:bg-emerald-950" : "",
+                r.id === highlight ? "bg-emerald-50 dark:bg-emerald-950" : "",
               ].join(" ")}
             >
               <td className="py-2 pr-2 opacity-60">{i + 1}</td>
               <td className="py-2 pr-2 font-medium">
                 {hrefFor ? (
-                  <Link href={hrefFor(r.pairId)} className="underline decoration-lime-400 decoration-2 underline-offset-2">
-                    {pairName(r.pairId)}
+                  <Link href={hrefFor(r.id)} className="underline decoration-lime-400 decoration-2 underline-offset-2">
+                    {nameOf(r.id)}
                   </Link>
                 ) : (
-                  pairName(r.pairId)
+                  nameOf(r.id)
                 )}
+                {r.note && <span className="ml-1 text-xs font-normal opacity-60">{r.note}</span>}
               </td>
               <td className="px-1 text-center">{r.played}</td>
               <td className="px-1 text-center">{r.won}</td>
