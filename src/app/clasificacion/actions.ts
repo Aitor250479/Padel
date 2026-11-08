@@ -16,9 +16,12 @@ export async function startNewLeague(formData: FormData) {
   const word = String(formData.get("confirm") ?? "").trim().toUpperCase();
   if (!name) return back({ error: "Ponle un nombre a la nueva liga." });
   if (word !== "REINICIAR") return back({ error: "Escribe REINICIAR para confirmar." });
-  const { error } = await supabase.rpc("start_new_league", { new_name: name });
+  const kind = formData.get("kind") === "individual" ? "individual" : "parejas";
+  const { error } = await supabase.rpc("start_new_league", { new_name: name, new_kind: kind });
   if (error) return back({ error: friendlyError(error.message) });
-  back({ ok: `¡Empieza "${name}"! La liga anterior queda guardada en Ligas anteriores.` });
+  back({
+    ok: `¡Empieza "${name}" (${kind === "individual" ? "liga individual" : "liga por parejas"})! La liga anterior queda guardada en Ligas anteriores.`,
+  });
 }
 
 export async function renameLeague(formData: FormData) {

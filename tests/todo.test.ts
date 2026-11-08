@@ -57,3 +57,20 @@ const clash = myTodos({
 });
 assert.equal(clash[0].title, "Los resultados no coinciden");
 console.log("ok portada");
+
+// Liga individual: cada partido con una pareja distinta (mySide).
+{
+  const ind = myTodos({
+    ...base,
+    myPair: "",
+    mySide: (x) => (x.id === "m1" ? "yoA" : "yoB"),
+    matches: [
+      m("m1", "2026-11-02", { pair_a: "yoA", pair_b: "r1" }),
+      m("m2", "2026-10-26", { pair_a: "r2", pair_b: "yoB" }),
+    ],
+    proposals: [{ match_id: "m2", pair_id: "r2", sets_a: 2, sets_b: 0, score_detail: null }],
+  });
+  assert.ok(ind.some((t) => t.title === "Falta poner el resultado" && t.text.includes("Smash")), "individual: rival del partido 1");
+  assert.ok(ind.some((t) => t.title === "Confirma el resultado" && t.text.includes("Globo")), "individual: confirmar lo que puso el rival");
+  console.log("ok todo liga individual");
+}

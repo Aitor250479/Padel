@@ -2,7 +2,7 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import Scoreboard from "@/components/Scoreboard";
 import Image from "next/image";
-import { currentLeague, onlyLeague } from "@/lib/leagues";
+import { currentLeague, isIndividual, onlyLeague } from "@/lib/leagues";
 import {
   MATCH_COLUMNS,
   PROPOSED_COLUMNS,
@@ -14,7 +14,7 @@ import {
 } from "@/lib/matches";
 import { myTodos, type Todo } from "@/lib/todo";
 import TodoList from "@/components/TodoList";
-import { requireProfile } from "@/lib/session";
+import { requireProfile, type Profile } from "@/lib/session";
 import { HOME_MODE_KEY, WELCOME_KEY } from "@/lib/welcome";
 import { addDays, currentWeek, defaultWeek, formatWeekLong, nowInSpain } from "@/lib/weeks";
 
@@ -42,7 +42,9 @@ export default async function Home() {
   const [league, directory] = await Promise.all([currentLeague(supabase), loadPairDirectory(supabase)]);
   // Lo pendiente del jugador y las noticias se cargan a la vez.
   const [todos, news] = await Promise.all([
-    profile.pair_id ? loadTodos(supabase, profile.id, profile.pair_id, league, directory) : Promise.resolve([]),
+    directory.pairsOf(profile).length || isIndividual(league)
+      ? loadTodos(supabase, profile, directory.pairsOf(profile), league, directory)
+      : Promise.resolve([]),
     showNews
       ? onlyLeague(
           supabase.from("matches").select("id, week_start, pair_a, pair_b, sets_a, sets_b, score_detail"),
@@ -98,9 +100,9 @@ export default async function Home() {
           </section>
         )}
 
-        {(!profile.pair_id || !profile.full_name) && (
+        {((!profile.pair_id && !isIndividual(league)) || !profile.full_name) && (
           <div className="mt-4 flex flex-col gap-1 text-sm opacity-80">
-            {!profile.pair_id && <p>Todavía no tienes pareja asignada. Un organizador te la asignará pronto.</p>}
+            {!profile.pair_id && !isIndividual(league) && <p>Todavía no tienes pareja asignada. Un organizador te la asignará pronto.</p>}
             {!profile.full_name && (
               <p>
                 Pon tu nombre en <Link href="/perfil" className="underline">Mi perfil</Link> para que
@@ -119,19 +121,21 @@ type Directory = Awaited<ReturnType<typeof loadPairDirectory>>;
 /** Lo que el jugador tiene pendiente: resultados, próximos partidos y disponibilidad. */
 async function loadTodos(
   supabase: Awaited<ReturnType<typeof requireProfile>>["supabase"],
-  profileId: string,
-  pairId: string,
+  profile: Profile,
+  pairIds: string[],
   league: Awaited<ReturnType<typeof currentLeague>>,
   directory: Directory,
 ): Promise<Todo[]> {
   const thisWeek = currentWeek();
   const availabilityWeek = defaultWeek();
   const [{ data: matches }, { data: answer }] = await Promise.all([
-    onlyLeague(
+    !pairIds.length
+      ? Promise.resolve({ data: [] as Match[] })
+      : onlyLeague(
       supabase
         .from("matches")
         .select(MATCH_COLUMNS)
-        .or(`pair_a.eq.${pairId},pair_b.eq.${pairId}`)
+        .or(`pair_a.in.(${pairIds.join(",")}),pair_b.in.(${pairIds.join(",")})`)
         .neq("status", "cancelado")
         .is("sets_a", null),
       league,
@@ -139,7 +143,7 @@ async function loadTodos(
     supabase
       .from("player_availability")
       .select("can_play")
-      .eq("profile_id", profileId)
+      .eq("profile_id", profile.id)
       .eq("week_start", availabilityWeek)
       .maybeSingle(),
   ]);
@@ -149,7 +153,8 @@ async function loadTodos(
     : { data: [] as ProposedResult[] };
   const now = nowInSpain();
   return myTodos({
-    myPair: pairId,
+    myPair: pairIds[0] ?? "",
+    mySide: (m) => directory.sideOf(m, profile) ?? pairIds[0] ?? "",
     thisWeek,
     nextWeek: addDays(thisWeek, 7),
     matches: matches ?? [],

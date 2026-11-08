@@ -2,6 +2,7 @@ import SubmitButton from "@/components/SubmitButton";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
+import { currentLeague, isIndividual } from "@/lib/leagues";
 import { displayName, requireProfile, type Pair, type Profile } from "@/lib/session";
 import { addDays, currentWeek, formatWeekLong, parseWeek, weekLabel, weeksFromNow } from "@/lib/weeks";
 import { setAvailability } from "./actions";
@@ -21,12 +22,11 @@ export default async function DisponibilidadPage({
   const weekStart = requested < thisWeek ? thisWeek : requested;
   const offset = weeksFromNow(weekStart, thisWeek);
 
-  const [{ data: pairs }, { data: players }, { data: answers }] = await Promise.all([
-    supabase.from("pairs").select("id, name").order("name").returns<Pair[]>(),
+  const [{ data: pairs }, { data: everyone }, { data: answers }, league] = await Promise.all([
+    supabase.from("pairs").select("id, name").is("league_id", null).order("name").returns<Pair[]>(),
     supabase
       .from("profiles")
-      .select("id, email, full_name, is_organizer, pair_id")
-      .not("pair_id", "is", null)
+      .select("id, email, full_name, is_organizer, pair_id, active")
       .order("created_at")
       .returns<Profile[]>(),
     supabase
@@ -34,7 +34,11 @@ export default async function DisponibilidadPage({
       .select("profile_id, can_play")
       .eq("week_start", weekStart)
       .returns<Answer[]>(),
+    currentLeague(supabase),
   ]);
+  const individual = isIndividual(league);
+  const players = (everyone ?? []).filter((p) => p.pair_id);
+  const activePlayers = (everyone ?? []).filter((p) => p.active !== false);
 
   const answerOf = new Map((answers ?? []).map((a) => [a.profile_id, a.can_play]));
   const mine = answerOf.get(profile.id);
@@ -119,15 +123,46 @@ export default async function DisponibilidadPage({
               : mine
                 ? "Has indicado que puedes jugar."
                 : "Has indicado que no puedes jugar."}{" "}
-            Tu pareja jugará si los dos podéis.
+            {individual
+              ? "En esta liga individual la pareja te toca cada semana al generar los partidos."
+              : "Tu pareja jugará si los dos podéis."}
           </p>
-          {!profile.pair_id && (
+          {!individual && !profile.pair_id && (
             <p className="mt-2 text-sm text-amber-700">
               Aún no tienes pareja asignada. Un organizador te la asignará.
             </p>
           )}
         </section>
 
+        {individual ? (
+          <>
+            <h2 className="mb-2 font-semibold">
+              Jugadores ({activePlayers.filter((p) => answerOf.get(p.id) === true).length} de{" "}
+              {activePlayers.length} pueden jugar)
+            </h2>
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {activePlayers.map((p) => {
+                const a = answerOf.get(p.id);
+                return (
+                  <li
+                    key={p.id}
+                    className={[
+                      "flex items-center justify-between gap-2 rounded-xl border p-3",
+                      a === true
+                        ? "border-emerald-400 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950"
+                        : "border-gray-200 dark:border-gray-800",
+                      p.id === profile.id ? "ring-2 ring-sky-400" : "",
+                    ].join(" ")}
+                  >
+                    <span className="font-medium">{displayName(p)}</span>
+                    <span>{a === true ? "✅" : a === false ? "❌" : "⏳"}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        ) : (
+        <>
         <h2 className="mb-2 font-semibold">
           Parejas ({available} de {rows.length} pueden jugar)
         </h2>
@@ -166,6 +201,8 @@ export default async function DisponibilidadPage({
             </li>
           ))}
         </ul>
+        </>
+        )}
         <p className="mt-3 text-xs opacity-60">✅ puede · ❌ no puede · ⏳ sin responder</p>
       </main>
     </>

@@ -27,7 +27,7 @@ export default async function SorteoPage({
   const all = params.modo === "todos";
 
   const [{ data: pairs }, { data: players }] = await Promise.all([
-    supabase.from("pairs").select("id, name").order("name").returns<Pair[]>(),
+    supabase.from("pairs").select("id, name").is("league_id", null).order("name").returns<Pair[]>(),
     supabase
       .from("profiles")
       .select("*")

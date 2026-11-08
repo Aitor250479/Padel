@@ -4,7 +4,7 @@ import Header from "@/components/Header";
 import StandingsTable from "@/components/StandingsTable";
 import StandingsTabs from "@/components/StandingsTabs";
 import { leaguePlayerStandings, leagueStandings } from "@/lib/league-data";
-import { LEAGUE_COLUMNS, type League } from "@/lib/leagues";
+import { LEAGUE_COLUMNS, isIndividual, type League } from "@/lib/leagues";
 import { loadPairDirectory } from "@/lib/matches";
 import { requireProfile } from "@/lib/session";
 
@@ -21,15 +21,19 @@ export default async function LeaguePage({
 }) {
   const { supabase, profile } = await requireProfile();
   const { id } = await params;
-  const individual = (await searchParams).vista === "jugadores";
+  const wantsPlayers = (await searchParams).vista === "jugadores";
   const [{ data: league }, { pairName }] = await Promise.all([
     supabase.from("leagues").select(LEAGUE_COLUMNS).eq("id", id).maybeSingle<League>(),
     loadPairDirectory(supabase),
   ]);
   if (!league) notFound();
+  const individualLeague = isIndividual(league);
+  const individual = individualLeague || wantsPlayers;
   const { rows, matches } = await leagueStandings(supabase, league, [], { onlyPlayed: true });
   const players = individual ? await leaguePlayerStandings(supabase, matches) : null;
-  const champion = league.ended_at && rows[0]?.played ? rows[0] : null;
+  const champion = league.ended_at && !individualLeague && rows[0]?.played ? rows[0] : null;
+  const playerChampion =
+    league.ended_at && individualLeague && players?.rows[0]?.played ? players.rows[0] : null;
 
   return (
     <>
@@ -49,7 +53,12 @@ export default async function LeaguePage({
             🏆 Campeones: {pairName(champion.id)} con {champion.points} puntos
           </p>
         )}
-        {rows.length > 0 && <StandingsTabs base={`/clasificacion/liga/${league.id}`} players={individual} />}
+        {playerChampion && players && (
+          <p className="mb-4 rounded-xl bg-lime-100 p-3 text-center font-semibold text-neutral-900">
+            🏆 Campeón: {players.nameOf(playerChampion.id)} con {playerChampion.points} puntos
+          </p>
+        )}
+        {rows.length > 0 && !individualLeague && <StandingsTabs base={`/clasificacion/liga/${league.id}`} players={individual} />}
         {players ? (
           <>
             <StandingsTable

@@ -2,6 +2,7 @@ import SubmitButton from "@/components/SubmitButton";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
+import { currentLeague, isIndividual } from "@/lib/leagues";
 import { displayName, requireOrganizer, type Pair, type Profile } from "@/lib/session";
 import { createPair, createPlayer } from "./actions";
 import { button, input, rowLink } from "./ui";
@@ -14,27 +15,40 @@ export default async function ParejasPage({
   const { supabase, profile } = await requireOrganizer();
   const { error, ok } = await searchParams;
 
-  const [{ data: pairs }, { data: players }] = await Promise.all([
-    supabase.from("pairs").select("id, name").order("name").returns<Pair[]>(),
+  const [{ data: pairs }, { data: players }, league] = await Promise.all([
+    supabase.from("pairs").select("id, name").is("league_id", null).order("name").returns<Pair[]>(),
     supabase
       .from("profiles")
       .select("*")
       .order("full_name")
       .returns<Profile[]>(),
+    currentLeague(supabase),
   ]);
+  const individual = isIndividual(league);
 
   const playersOf = (pairId: string) => (players ?? []).filter((p) => p.pair_id === pairId);
   const active = (players ?? []).filter((p) => p.active !== false);
   const inactive = (players ?? []).filter((p) => p.active === false);
-  const unassigned = active.filter((p) => !p.pair_id);
+  // En la liga individual no hay parejas fijas: se listan todos los jugadores activos.
+  const unassigned = individual ? active : active.filter((p) => !p.pair_id);
 
   return (
     <>
       <Header profile={profile} />
       <main className="mx-auto max-w-3xl px-4 py-6">
-        <h1 className="mb-4 text-2xl font-bold">Parejas y jugadores</h1>
+        <h1 className="mb-4 text-2xl font-bold">{individual ? "Jugadores" : "Parejas y jugadores"}</h1>
         <Notice ok={ok} error={error} />
 
+        {individual && (
+          <p className="mb-6 rounded-xl border border-sky-300 bg-sky-50 p-4 text-sm text-sky-950 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100">
+            🙋 <b>La liga en curso es individual</b>, así que las parejas fijas no se usan: cada semana
+            se forman parejas nuevas al generar los partidos. Las parejas que había se guardan tal cual
+            y vuelven si empiezas otra liga por parejas.
+          </p>
+        )}
+
+        {!individual && (
+        <>
         <section className="mb-8">
           <h2 className="mb-3 text-lg font-semibold">Parejas ({pairs?.length ?? 0})</h2>
           <ul className="mb-3 grid gap-2 sm:grid-cols-2">
@@ -87,11 +101,17 @@ export default async function ParejasPage({
             </Link>
           </div>
         </section>
+        </>
+        )}
 
         <section className="mb-8">
-          <h2 className="mb-1 text-lg font-semibold">Jugadores sin pareja ({unassigned.length})</h2>
+          <h2 className="mb-1 text-lg font-semibold">
+            {individual ? `Jugadores activos (${unassigned.length})` : `Jugadores sin pareja (${unassigned.length})`}
+          </h2>
           <p className="mb-3 text-sm opacity-70">
-            Aparecen aquí cuando se dan de alta. Entra en uno para asignarle pareja.
+            {individual
+              ? "Entra en uno para ver su ficha, cambiarle la contraseña o desactivarlo."
+              : "Aparecen aquí cuando se dan de alta. Entra en uno para asignarle pareja."}
           </p>
           {unassigned.length ? (
             <ul className="grid gap-2 sm:grid-cols-2">

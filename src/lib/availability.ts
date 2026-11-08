@@ -26,3 +26,18 @@ export async function availablePairIds(
     .filter(([, members]) => members.length === 2 && members.every((id) => yes.has(id)))
     .map(([pairId]) => pairId);
 }
+
+/** Jugadores activos que han dicho que pueden jugar esa semana (liga individual). */
+export async function availablePlayerIds(supabase: SupabaseClient, weekStart: string) {
+  const [{ data: players }, { data: answers }] = await Promise.all([
+    supabase.from("profiles").select("id, active").returns<{ id: string; active?: boolean }[]>(),
+    supabase
+      .from("player_availability")
+      .select("profile_id")
+      .eq("week_start", weekStart)
+      .eq("can_play", true)
+      .returns<{ profile_id: string }[]>(),
+  ]);
+  const yes = new Set((answers ?? []).map((a) => a.profile_id));
+  return (players ?? []).filter((p) => p.active !== false && yes.has(p.id)).map((p) => p.id);
+}

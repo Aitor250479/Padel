@@ -33,7 +33,7 @@ export default async function PlayerPage({
       .select("*")
       .eq("id", id)
       .maybeSingle<Profile>(),
-    supabase.from("pairs").select("id, name").order("name").returns<Pair[]>(),
+    supabase.from("pairs").select("id, name").is("league_id", null).order("name").returns<Pair[]>(),
   ]);
   if (!player) notFound();
 

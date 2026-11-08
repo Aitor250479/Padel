@@ -6,7 +6,7 @@ import Notice from "@/components/Notice";
 import StandingsTable from "@/components/StandingsTable";
 import StandingsTabs from "@/components/StandingsTabs";
 import { leaguePlayerStandings, leagueStandings } from "@/lib/league-data";
-import { LEAGUE_COLUMNS, type League } from "@/lib/leagues";
+import { LEAGUE_COLUMNS, isIndividual, type League } from "@/lib/leagues";
 import { loadPairDirectory } from "@/lib/matches";
 import { requireProfile } from "@/lib/session";
 import { renameLeague, startNewLeague } from "./actions";
@@ -24,19 +24,22 @@ export default async function ClasificacionPage({
 }) {
   const { supabase, profile } = await requireProfile();
   const { ok, error, vista } = await searchParams;
-  const individual = vista === "jugadores";
+
   const [{ pairs, pairName }, { data: leagues }] = await Promise.all([
     loadPairDirectory(supabase),
     supabase.from("leagues").select(LEAGUE_COLUMNS).order("started_at", { ascending: false }).returns<League[]>(),
   ]);
   const current = (leagues ?? []).find((l) => !l.ended_at) ?? null;
   const previous = (leagues ?? []).filter((l) => l.ended_at);
+  // En una liga individual solo hay clasificación individual.
+  const individualLeague = isIndividual(current);
+  const individual = individualLeague || vista === "jugadores";
   const { rows, matches } = await leagueStandings(
     supabase,
     current,
     pairs.map((p) => p.id),
   );
-  const players = individual ? await leaguePlayerStandings(supabase, matches, { includeCurrentPlayers: true }) : null;
+  const players = individual ? await leaguePlayerStandings(supabase, matches, { includeCurrentPlayers: true, individual: individualLeague }) : null;
 
   return (
     <>
@@ -45,11 +48,12 @@ export default async function ClasificacionPage({
         <h1 className="text-2xl font-bold">Clasificación</h1>
         {current && (
           <p className="mb-4 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-            🏆 {current.name} · desde el {formatDate(current.started_at)}
+            🏆 {current.name} · {individualLeague ? "liga individual" : "liga por parejas"} · desde el{" "}
+            {formatDate(current.started_at)}
           </p>
         )}
         <Notice ok={ok} error={error} />
-        <StandingsTabs base="/clasificacion" players={individual} />
+        {!individualLeague && <StandingsTabs base="/clasificacion" players={individual} />}
         {players ? (
           <>
             <StandingsTable
@@ -60,8 +64,10 @@ export default async function ClasificacionPage({
               hrefFor={(id) => `/jugadores/${id}/estadisticas`}
             />
             <p className="mt-2 text-xs opacity-60">
-              Cada jugador suma los puntos de los partidos que ha jugado, con la pareja que tenía en
-              cada partido. Pulsa en un jugador para ver sus estadísticas.
+              {individualLeague
+                ? "Liga individual: cada semana cambian las parejas y cada jugador suma los puntos de sus partidos."
+                : "Cada jugador suma los puntos de los partidos que ha jugado, con la pareja que tenía en cada partido."}{" "}
+              Pulsa en un jugador para ver sus estadísticas.
             </p>
           </>
         ) : (
@@ -133,11 +139,29 @@ export default async function ClasificacionPage({
               </h2>
               <p className="mb-3 text-sm opacity-70">
                 Termina «{current.name}» (su clasificación y resultados quedan en Ligas anteriores) y
-                empieza una liga nueva desde cero. Las parejas, los jugadores y la disponibilidad se
-                mantienen.
+                empieza una liga nueva desde cero, por parejas o individual. Las parejas, los jugadores
+                y la disponibilidad se mantienen.
               </p>
               <form action={startNewLeague} className="flex flex-col gap-2">
                 <input name="name" required maxLength={60} placeholder="Nombre de la nueva liga" className={input} />
+                <fieldset className="flex flex-col gap-1 text-sm">
+                  <legend className="mb-1 font-semibold">Tipo de liga</legend>
+                  <label className="flex items-start gap-2">
+                    <input type="radio" name="kind" value="parejas" defaultChecked className="mt-1" />
+                    <span>
+                      <b>Por parejas</b> · como hasta ahora: parejas fijas, juegan las parejas en las que
+                      pueden los dos.
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-2">
+                    <input type="radio" name="kind" value="individual" className="mt-1" />
+                    <span>
+                      <b>Individual</b> · cada semana se forman parejas nuevas entre los jugadores
+                      disponibles, rotando compañeros. Parejas queda deshabilitado (no se borra) y la
+                      clasificación es por jugador.
+                    </span>
+                  </label>
+                </fieldset>
                 <div className="flex flex-wrap gap-2">
                   <input name="confirm" required autoComplete="off" placeholder="Escribe REINICIAR" className={input} />
                   <ConfirmButton

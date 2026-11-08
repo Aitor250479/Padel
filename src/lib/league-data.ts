@@ -28,12 +28,13 @@ export async function leagueStandings(
 /**
  * Clasificación individual de una liga. Cada jugador suma los puntos de los
  * partidos que jugó, con la pareja que tenía entonces (tabla match_players).
- * En la liga en curso también salen, con 0, los jugadores activos con pareja.
+ * En la liga en curso también salen, con 0, los jugadores activos con pareja
+ * (en una liga individual, todos los activos).
  */
 export async function leaguePlayerStandings(
   supabase: SupabaseClient,
   matches: Match[],
-  { includeCurrentPlayers = false } = {},
+  { includeCurrentPlayers = false, individual = false } = {},
 ) {
   const played = matches.filter((m) => m.status !== "cancelado" && m.sets_a !== null).map((m) => m.id);
   const [{ data: players }, { data: people }] = await Promise.all([
@@ -48,7 +49,7 @@ export async function leaguePlayerStandings(
   ]);
   const everyone = people ?? [];
   const base = includeCurrentPlayers
-    ? everyone.filter((p) => p.active !== false && p.pair_id).map((p) => p.id)
+    ? everyone.filter((p) => p.active !== false && (individual || p.pair_id)).map((p) => p.id)
     : [];
   const rows = computePlayerStandings(base, matches, players ?? []).map(({ playerId, ...r }) => {
     const p = everyone.find((x) => x.id === playerId);
