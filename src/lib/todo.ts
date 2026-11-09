@@ -9,6 +9,8 @@ export type Todo = {
   title: string;
   text: string;
   href: string;
+  /** Solo el título en la tarjeta: el detalle se ve al entrar. */
+  brief?: boolean;
 };
 
 export type TodoInput = {
@@ -80,6 +82,7 @@ export function myTodos(i: TodoInput): Todo[] {
       title: m.week_start === i.thisWeek ? "Tu partido de esta semana" : "Tu partido de la semana que viene",
       text: `Contra ${rivalText(m)}. ` + (when ? `📍 ${m.booking_place || "Lugar sin indicar"}, ${when}.` : "Falta reservar pista y apuntar lugar, fecha y hora."),
       href: `/partidos/${m.id}`,
+      brief: true,
     });
   }
 
