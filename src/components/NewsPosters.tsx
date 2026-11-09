@@ -5,7 +5,7 @@ import { breakingFontSize, fitFontSize } from "@/lib/news";
 const name = "absolute -translate-y-1/2 overflow-hidden text-ellipsis whitespace-nowrap font-black uppercase italic leading-tight";
 
 // Casillas de enfrentamiento.png (1754x897), en porcentaje.
-const MATCHUP_ROWS = [73.6, 88.2];
+const MATCHUP_ROWS = [72.1, 86.7];
 const MATCHUP_LEFT = [7, 63.5];
 const MATCHUP_WIDTH = 29;
 
