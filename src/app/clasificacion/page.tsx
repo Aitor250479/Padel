@@ -94,6 +94,36 @@ export default async function ClasificacionPage({
             <li>Partido sin terminar: empate, 1 punto para cada pareja</li>
           </ul>
           <p>A igualdad de puntos, desempatan los partidos ganados y luego la diferencia de sets.</p>
+
+          <p className="mt-3 font-semibold">🎲 Cómo funciona el sorteo</p>
+          <p>
+            Cada semana, cada jugador marca en Disponibilidad si puede jugar. Después, un organizador lanza el
+            sorteo. Solo entran quienes han dicho que pueden, y nadie juega más de un partido por semana.
+          </p>
+          {individualLeague ? (
+            <ul className="my-1 list-inside list-disc">
+              <li>Los partidos se forman de 4 en 4 entre los jugadores disponibles.</li>
+              <li>Si sobran jugadores, descansan los que más partidos llevan (si hay empate, al azar).</li>
+              <li>
+                Se intenta que no repitas compañero y, después, que no repitas rivales. Lo demás se decide al azar.
+              </li>
+            </ul>
+          ) : (
+            <ul className="my-1 list-inside list-disc">
+              <li>Una pareja entra en el sorteo si pueden jugar sus dos miembros.</li>
+              <li>
+                Si el número de parejas es impar, descansa la que más partidos lleva (si hay empate, se decide al
+                azar).
+              </li>
+              <li>
+                A cada pareja le toca de rival la que menos partidos lleva (si hay empate, al azar). Se puede repetir
+                rival.
+              </li>
+            </ul>
+          )}
+          <p>
+            Los organizadores pueden retocar los partidos a mano después del sorteo si hay algún cambio de última hora.
+          </p>
         </div>
 
         {previous.length > 0 && (
