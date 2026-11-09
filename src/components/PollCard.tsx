@@ -5,7 +5,7 @@ import { formatBooking } from "@/lib/matches";
 import Countdown from "@/components/Countdown";
 import { madridToEpoch, pollOpen, pollResults, type Poll, type PollOption, type PollVote } from "@/lib/polls";
 
-/** Encuesta del inicio: para votar mientras está abierta y con el resultado al cerrarse. */
+/** Encuesta: para votar mientras está abierta y con el resultado al cerrarse. */
 export default function PollCard({
   poll,
   options,

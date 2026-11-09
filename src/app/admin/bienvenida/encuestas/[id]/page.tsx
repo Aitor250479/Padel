@@ -8,8 +8,7 @@ import SharePollResultButton from "@/components/SharePollResultButton";
 import { requireOrganizer } from "@/lib/session";
 import { siteUrl } from "@/lib/site-url";
 import { formatBooking } from "@/lib/matches";
-import { POLL_KEY, loadPoll, pollOpen, pollResultText, pollResults } from "@/lib/polls";
-import { HOME_MODE_KEY } from "@/lib/welcome";
+import { loadPoll, pollOnHome, pollOpen, pollResultText, pollResultUntil, pollResults } from "@/lib/polls";
 import { nowInSpain } from "@/lib/weeks";
 import { updatePollClose } from "../actions";
 
@@ -24,19 +23,13 @@ export default async function EncuestaPage({
 }) {
   const { supabase, profile } = await requireOrganizer();
   const [{ id }, { error, ok }] = await Promise.all([params, searchParams]);
-  const [data, { data: texts }] = await Promise.all([
-    loadPoll(supabase, id),
-    supabase
-      .from("site_texts")
-      .select("key, body")
-      .in("key", [POLL_KEY, HOME_MODE_KEY])
-      .returns<{ key: string; body: string }[]>(),
-  ]);
+  const data = await loadPoll(supabase, id);
   if (!data) notFound();
   const { poll, options, votes } = data;
-  const isCurrent = texts?.find((t) => t.key === POLL_KEY)?.body === poll.id;
-  const onHome = isCurrent && texts?.find((t) => t.key === HOME_MODE_KEY)?.body === "encuesta";
-  const open = pollOpen(poll, nowInSpain());
+  const now = nowInSpain();
+  const onHome = pollOnHome(poll, now);
+  const until = formatBooking(pollResultUntil(poll));
+  const open = pollOpen(poll, now);
   const results = open ? null : pollResults(options, votes);
   // Participación: cuántos jugadores activos han votado (sin saber quién ni qué).
   const participation = open
@@ -55,7 +48,11 @@ export default async function EncuestaPage({
           {open
             ? `Abierta hasta el ${formatBooking(poll.closes_at)}. Los votos se verán al cerrarse.`
             : `Cerrada el ${formatBooking(poll.closes_at)} · ${results!.total} ${results!.total === 1 ? "voto" : "votos"}`}
-          {isCurrent && (onHome ? " · Se muestra en el inicio." : " · Es la encuesta actual, pero ahora no se muestra en el inicio.")}
+          {open
+            ? ` Después, el resultado sale en el inicio hasta el ${until}.`
+            : onHome
+              ? ` · El resultado sale en el inicio hasta el ${until}.`
+              : " · Ya no sale en el inicio."}
         </p>
         <Notice ok={ok} error={error} />
 
@@ -111,11 +108,10 @@ export default async function EncuestaPage({
                 <li key={o.id}>{o.label}</li>
               ))}
             </ul>
-            {isCurrent && (
-              <SharePollButton
-                text={`🗳️ *¡Nueva encuesta en el Torneo Pádel Loyola!*\n*${poll.question}*\n⏳ Vota antes del ${formatBooking(poll.closes_at)} 👉 ${await siteUrl()}`}
-              />
-            )}
+            <SharePollButton
+              pollId={poll.id}
+              text={`🗳️ *¡Nueva encuesta en el Torneo Pádel Loyola!*\n*${poll.question}*\n⏳ Vota antes del ${formatBooking(poll.closes_at)} 👉 ${await siteUrl()}/encuesta/${poll.id}`}
+            />
             <form action={updatePollClose} className="flex flex-wrap items-center gap-2 text-sm">
               <input type="hidden" name="id" value={poll.id} />
               <span className="font-semibold">Cambiar el cierre:</span>

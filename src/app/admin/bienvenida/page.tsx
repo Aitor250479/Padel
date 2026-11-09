@@ -5,8 +5,8 @@ import Notice from "@/components/Notice";
 import { requireOrganizer } from "@/lib/session";
 import ShareImageButton from "@/components/ShareImageButton";
 import { siteUrl } from "@/lib/site-url";
-import { formatBooking } from "@/lib/matches";
-import { POLL_KEY, loadPoll, pollOpen } from "@/lib/polls";
+import { POLL_COLUMNS, addHoursLocal, pollOnHome, pollOpen, type Poll } from "@/lib/polls";
+import { NEWS_MATCHUPS_KEY, NEWS_RESULTS_KEY, newsEnabled } from "@/lib/news";
 import { HOME_MODE_KEY, WELCOME_KEY, type HomeMode } from "@/lib/welcome";
 import { nowInSpain } from "@/lib/weeks";
 import { saveWelcome } from "./actions";
@@ -21,13 +21,25 @@ export default async function BienvenidaPage({
   const { data } = await supabase
     .from("site_texts")
     .select("key, body")
-    .in("key", [WELCOME_KEY, HOME_MODE_KEY, POLL_KEY])
+    .in("key", [WELCOME_KEY, HOME_MODE_KEY, NEWS_MATCHUPS_KEY, NEWS_RESULTS_KEY])
     .returns<{ key: string; body: string }[]>();
+  const get = (key: string) => data?.find((r) => r.key === key)?.body;
   const text = data?.find((r) => r.key === WELCOME_KEY)?.body ?? "";
-  const saved = data?.find((r) => r.key === HOME_MODE_KEY)?.body;
-  const mode: HomeMode = saved === "noticias" || saved === "encuesta" ? saved : "texto";
-  const current = await loadPoll(supabase, data?.find((r) => r.key === POLL_KEY)?.body);
-  const open = current ? pollOpen(current.poll, nowInSpain()) : false;
+  const mode: HomeMode = get(HOME_MODE_KEY) === "noticias" ? "noticias" : "texto";
+  const now = nowInSpain();
+  // Encuestas que salen ahora como tarjeta en el inicio, y noticias activadas.
+  const [{ data: polls }, { count: customOn }, { count: customAll }] = await Promise.all([
+    supabase
+      .from("polls")
+      .select(POLL_COLUMNS)
+      .gte("closes_at", addHoursLocal(now, -720))
+      .order("closes_at")
+      .returns<Poll[]>(),
+    supabase.from("news_items").select("id", { count: "exact", head: true }).eq("visible", true),
+    supabase.from("news_items").select("id", { count: "exact", head: true }),
+  ]);
+  const onHome = (polls ?? []).filter((p) => pollOnHome(p, now));
+  const fixedOn = [NEWS_MATCHUPS_KEY, NEWS_RESULTS_KEY].filter((k) => newsEnabled(get(k))).length;
   const invite = `${await siteUrl()}/unete`;
 
   const option =
@@ -38,10 +50,13 @@ export default async function BienvenidaPage({
       <Header profile={profile} />
       <main className="mx-auto max-w-3xl px-4 py-6">
         <h1 className="mb-1 text-2xl font-bold">Pantalla de inicio</h1>
-        <p className="mb-4 text-sm opacity-70">Elige qué ven todos los jugadores al entrar en la web.</p>
+        <p className="mb-4 text-sm opacity-70">
+          Elige qué ven todos los jugadores al entrar en la web. Las encuestas salen solas, como
+          tarjetas, encima de todo.
+        </p>
         <Notice ok={ok} error={error} />
         <form action={saveWelcome} className="flex flex-col gap-4">
-          <fieldset className="grid gap-2 sm:grid-cols-3">
+          <fieldset className="grid gap-2 sm:grid-cols-2">
             <legend className="mb-2 font-semibold">En el inicio mostrar</legend>
             <label className={option}>
               <input type="radio" name="modo" value="texto" defaultChecked={mode === "texto"} className="mt-1" />
@@ -53,16 +68,9 @@ export default async function BienvenidaPage({
             <label className={option}>
               <input type="radio" name="modo" value="noticias" defaultChecked={mode === "noticias"} className="mt-1" />
               <span>
-                <span className="block font-semibold">📰 Últimas noticias</span>
-                <span className="block text-sm opacity-70">Los 5 últimos resultados confirmados, en marcador.</span>
-              </span>
-            </label>
-            <label className={option}>
-              <input type="radio" name="modo" value="encuesta" defaultChecked={mode === "encuesta"} className="mt-1" />
-              <span>
-                <span className="block font-semibold">🗳️ Encuesta</span>
+                <span className="block font-semibold">📰 Noticias</span>
                 <span className="block text-sm opacity-70">
-                  La encuesta actual: para votar mientras está abierta y, al cerrarse, su resultado.
+                  Las que tengas activadas en Noticias. Si no hay ninguna que mostrar, sale el texto de bienvenida.
                 </span>
               </span>
             </label>
@@ -89,21 +97,38 @@ export default async function BienvenidaPage({
           <p className="mb-3 text-sm opacity-70">
             Crea una encuesta nueva y consulta las publicadas anteriormente con su resultado.
           </p>
-          {current && (
-            <p className="mb-3 text-sm">
-              <span className="font-semibold">Actual:</span> {current.poll.question}
-              <span className="opacity-70">
-                {" · "}
-                {open ? `abierta hasta el ${formatBooking(current.poll.closes_at)}` : "cerrada"}
-                {mode !== "encuesta" && " · ahora no se muestra en el inicio"}
-              </span>
-            </p>
+          {onHome.length > 0 ? (
+            <ul className="mb-3 text-sm">
+              {onHome.map((p) => (
+                <li key={p.id}>
+                  <span className="font-semibold">{pollOpen(p, now) ? "Abierta:" : "Mostrando el resultado:"}</span>{" "}
+                  {p.question}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mb-3 text-sm opacity-70">Ahora no sale ninguna encuesta en el inicio.</p>
           )}
           <Link
             href="/admin/bienvenida/encuestas"
             className="inline-block rounded-lg bg-gray-800 px-4 py-2 font-semibold text-white"
           >
             Entrar en Encuestas
+          </Link>
+        </section>
+
+        <section className="mt-8 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+          <h2 className="mb-1 font-semibold">📰 Noticias</h2>
+          <p className="mb-3 text-sm opacity-70">
+            Enfrentamientos de la semana, resultados de la última jornada y noticias escritas por los
+            organizadores. Se muestran {fixedOn + (customOn ?? 0)} de {2 + (customAll ?? 0)}
+            {mode !== "noticias" && ", pero ahora el inicio muestra el texto de bienvenida"}.
+          </p>
+          <Link
+            href="/admin/bienvenida/noticias"
+            className="inline-block rounded-lg bg-gray-800 px-4 py-2 font-semibold text-white"
+          >
+            Entrar en Noticias
           </Link>
         </section>
 
