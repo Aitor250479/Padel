@@ -1,7 +1,10 @@
+import Image from "next/image";
+
 export default function Footer() {
   return (
-    <footer className="mx-auto mt-12 max-w-3xl border-t border-gray-200 px-4 py-6 text-xs opacity-70 dark:border-gray-800">
-      <details>
+    <footer className="mx-auto mt-12 max-w-3xl border-t border-gray-200 px-4 py-6 text-xs dark:border-gray-800">
+      <Image src="/mascota.gif" alt="" width={56} height={56} unoptimized className="mb-2" />
+      <details className="opacity-70">
         <summary className="cursor-pointer select-none">
           © Torneo Pádel Loyola · Términos y condiciones de uso
         </summary>
