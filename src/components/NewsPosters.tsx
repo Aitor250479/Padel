@@ -4,14 +4,13 @@ import { breakingFontSize, fitFontSize } from "@/lib/news";
 
 const name = "absolute -translate-y-1/2 overflow-hidden text-ellipsis whitespace-nowrap font-black uppercase italic leading-tight";
 
-// Cuatro modelos de cartel de enfrentamiento; cada partido del carrusel usa
-// uno distinto y se repiten a partir del quinto. Casillas en porcentaje.
-const MATCHUP_TEMPLATES = [
-  { src: "/enfrentamiento1.png", aspect: "1672 / 941", rows: [76.8, 90.2], left: [12.5, 60], width: 28.5 },
-  { src: "/enfrentamiento2.png", aspect: "744 / 463", rows: [73.7, 87.5], left: [6.5, 61.2], width: 32 },
-  { src: "/enfrentamiento3.png", aspect: "744 / 465", rows: [75.3, 89.1], left: [6.5, 61.2], width: 32 },
-  { src: "/enfrentamiento4.png", aspect: "744 / 465", rows: [76.0, 89.6], left: [6.5, 61.2], width: 32 },
-];
+// Cuatro modelos de cartel de enfrentamiento con la misma maqueta (1672x941); cada
+// partido del carrusel usa uno distinto y se repiten a partir del quinto.
+const MATCHUP_TEMPLATES = ["/enfrentamiento1.png", "/enfrentamiento2.png", "/enfrentamiento3.png", "/enfrentamiento4.png"];
+// Casillas de los nombres, en porcentaje.
+const MATCHUP_ROWS = [76.8, 90.2];
+const MATCHUP_LEFT = [12.5, 60];
+const MATCHUP_WIDTH = 28.5;
 
 /** Cartel "Próximo enfrentamiento" con los dos jugadores de cada lado. */
 export function MatchupPoster({
@@ -25,23 +24,23 @@ export function MatchupPoster({
   caption: string[];
   variant?: number;
 }) {
-  const t = MATCHUP_TEMPLATES[variant % MATCHUP_TEMPLATES.length];
+  const src = MATCHUP_TEMPLATES[variant % MATCHUP_TEMPLATES.length];
   return (
     <figure className="w-full">
-      <div className="relative w-full [container-type:inline-size]" style={{ aspectRatio: t.aspect }}>
-        <Image src={t.src} alt="Próximo enfrentamiento" fill sizes="(max-width: 768px) 100vw, 720px" className="object-contain" />
+      <div className="relative w-full [container-type:inline-size]" style={{ aspectRatio: "1672 / 941" }}>
+        <Image src={src} alt="Próximo enfrentamiento" fill sizes="(max-width: 768px) 100vw, 720px" className="object-contain" />
         {[a, b].map((players, side) =>
-          t.rows.map((top, r) => {
+          MATCHUP_ROWS.map((top, r) => {
             const text = players[r] ?? "";
             return (
               <span
                 key={`${side}-${r}`}
                 className={name}
                 style={{
-                  left: `${t.left[side]}%`,
-                  width: `${t.width}%`,
+                  left: `${MATCHUP_LEFT[side]}%`,
+                  width: `${MATCHUP_WIDTH}%`,
                   top: `${top}%`,
-                  fontSize: `${fitFontSize(text, t.width, 3.6, 2.2)}cqw`,
+                  fontSize: `${fitFontSize(text, MATCHUP_WIDTH, 3.6, 2.2)}cqw`,
                 }}
               >
                 {text}
