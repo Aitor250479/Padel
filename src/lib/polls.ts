@@ -37,6 +37,7 @@ export type PollTodo = {
   title: string;
   text: string;
   href: string;
+  brief?: boolean;
 };
 
 /** Tarjeta de la encuesta para el inicio de un jugador. */
@@ -48,10 +49,10 @@ export function pollTodo(
   const href = `/encuesta/${poll.id}`;
   const closes = i.formatBooking(poll.closes_at);
   if (!pollOpen(poll, i.now)) {
-    return { tone: "info", icon: "📊", title: "Ya está el resultado de la encuesta", text: `${poll.question} · Toca para verlo`, href };
+    return { tone: "info", icon: "📊", title: "Ya está el resultado de la encuesta", text: `${poll.question} · Toca para verlo`, href, brief: true };
   }
   if (!i.canVote) {
-    return { tone: "info", icon: "🗳️", title: "Encuesta abierta", text: `${poll.question} · Cierra el ${closes}`, href };
+    return { tone: "info", icon: "🗳️", title: "Encuesta abierta", text: `${poll.question} · Cierra el ${closes}`, href, brief: true };
   }
   if (i.voted) {
     return {
@@ -60,9 +61,10 @@ export function pollTodo(
       title: "Ya has votado en la encuesta",
       text: `${poll.question} · Puedes cambiar tu voto hasta el ${closes}`,
       href,
+      brief: true,
     };
   }
-  return { tone: "action", icon: "🗳️", title: "Encuesta abierta: ¡aún no has votado!", text: `${poll.question} · Cierra el ${closes}`, href };
+  return { tone: "action", icon: "🗳️", title: "Encuesta abierta: ¡aún no has votado!", text: `${poll.question} · Cierra el ${closes}`, href, brief: true };
 }
 export type PollOption = { id: string; poll_id: string; position: number; label: string };
 export type PollVote = { profile_id: string; option_id: string };

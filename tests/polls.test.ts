@@ -42,4 +42,5 @@ assert.equal(pollTodo(p, { now: "2026-11-09T10:00", voted: true, canVote: true, 
 assert.equal(pollTodo(p, { now: "2026-11-09T10:00", voted: false, canVote: false, formatBooking: fmt })?.tone, "info");
 assert.equal(pollTodo(p, { now: "2026-11-11T10:00", voted: false, canVote: true, formatBooking: fmt })?.icon, "📊");
 assert.equal(pollTodo(p, { now: "2026-11-13T10:00", voted: true, canVote: true, formatBooking: fmt }), null);
+assert.equal(pollTodo(p, { now: "2026-11-09T10:00", voted: false, canVote: true, formatBooking: fmt })?.brief, true, "solo el título");
 console.log("ok tarjetas de encuesta");

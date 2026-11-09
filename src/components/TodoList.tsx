@@ -10,6 +10,7 @@ export default function TodoList({ todos }: { todos: Todo[] }) {
           <li key={t.href + t.title}>
             <Link
               href={t.href}
+              title={t.brief ? t.text : undefined}
               className={[
                 "flex items-center gap-3 rounded-xl border-2 p-3 active:scale-[0.99]",
                 t.tone === "action"
@@ -22,7 +23,7 @@ export default function TodoList({ todos }: { todos: Todo[] }) {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block font-semibold">{t.title}</span>
-                <span className="block text-sm opacity-80">{t.text}</span>
+                {!t.brief && <span className="block text-sm opacity-80">{t.text}</span>}
               </span>
               <span aria-hidden className="text-xl opacity-50">
                 ›
