@@ -61,23 +61,36 @@ export function MatchupPoster({
   );
 }
 
-// Casillas de resultadopartido.png (1672x941), en porcentaje.
-const RESULT_NAME_TOP = [72.6, 87.2];
-const RESULT_SUB_TOP = [77.6, 92.2];
-const RESULT_SET_LEFT = [56.2, 72.2, 88.4];
-const RESULT_SET_TOP = [76.3, 90.8];
-const RESULT_LEFT = 18;
-const RESULT_WIDTH = 29;
+// Cuatro modelos de cartel de resultado (sin las rayas de escribir) con la misma maqueta; cada partido del
+// carrusel usa uno distinto y se repiten a partir del quinto. Casillas en porcentaje.
+const RESULT_TEMPLATES = ["/resultado1.png", "/resultado2.png", "/resultado3.png", "/resultado4.png"];
+const RESULT_NAME_TOP = [72.6, 86.4];
+const RESULT_SUB_TOP = [78.2, 92.0];
+const RESULT_SET_LEFT = [65.2, 77.5, 90.0];
+const RESULT_SET_TOP = [76.6, 89.2];
+const RESULT_LEFT = 13.5;
+const RESULT_WIDTH = 43;
 
 type ResultSide = { name: string; players: string; sets: number };
 
 /** Cartel "Resultado del partido" con los juegos de cada set. */
-export function ResultPoster({ a, b, detail }: { a: ResultSide; b: ResultSide; detail: string | null }) {
+export function ResultPoster({
+  a,
+  b,
+  detail,
+  variant = 0,
+}: {
+  a: ResultSide;
+  b: ResultSide;
+  detail: string | null;
+  variant?: number;
+}) {
+  const src = RESULT_TEMPLATES[variant % RESULT_TEMPLATES.length];
   const games = parseSets(detail);
   const rows = [a, b];
   return (
-    <div className="relative w-full [container-type:inline-size]" style={{ aspectRatio: "1672 / 941" }}>
-      <Image src="/resultadopartido.png" alt="Resultado del partido" fill sizes="(max-width: 768px) 100vw, 720px" className="object-contain" />
+    <div className="relative w-full [container-type:inline-size]" style={{ aspectRatio: "869 / 443" }}>
+      <Image src={src} alt="Resultado del partido" fill sizes="(max-width: 768px) 100vw, 720px" className="object-contain" />
       {rows.map((side, r) => {
         const other = rows[1 - r];
         const won = side.sets > other.sets;
@@ -97,7 +110,7 @@ export function ResultPoster({ a, b, detail }: { a: ResultSide; b: ResultSide; d
                 left: `${RESULT_LEFT}%`,
                 width: `${RESULT_WIDTH}%`,
                 top: `${RESULT_NAME_TOP[r]}%`,
-                fontSize: `${fitFontSize(title, RESULT_WIDTH, 3.2)}cqw`,
+                fontSize: `${fitFontSize(title, RESULT_WIDTH, 3.3)}cqw`,
               }}
             >
               {title}
@@ -122,7 +135,7 @@ export function ResultPoster({ a, b, detail }: { a: ResultSide; b: ResultSide; d
                 <span
                   key={s}
                   className={`absolute -translate-x-1/2 -translate-y-1/2 font-black tabular-nums ${g[r] > g[1 - r] ? "text-red-600" : "text-black"}`}
-                  style={{ left: `${left}%`, top: `${RESULT_SET_TOP[r]}%`, fontSize: "7.5cqw" }}
+                  style={{ left: `${left}%`, top: `${RESULT_SET_TOP[r]}%`, fontSize: "5.5cqw" }}
                 >
                   {g[r]}
                 </span>

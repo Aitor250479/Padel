@@ -139,9 +139,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
                       <h1 className={newsTitle}>🏁 Resultados de la última jornada</h1>
                       <p className={newsSub}>Semana del {formatWeekLong(lastWeek)}</p>
                       <Carousel label="Resultados de la última jornada">
-                        {lastResults.map((m) => (
+                        {lastResults.map((m, i) => (
                           <ResultPoster
                             key={m.id}
+                            variant={i}
                             detail={m.score_detail}
                             a={{
                               name: directory.pairName(m.pair_a),
