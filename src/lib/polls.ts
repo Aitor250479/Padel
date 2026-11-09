@@ -24,6 +24,20 @@ export function pollResults(options: PollOption[], votes: PollVote[]) {
   return { total, rows: rows.map((r) => ({ ...r, winner: max > 0 && r.count === max })) };
 }
 
+/** Texto que acompaña al cartel del resultado (sin enlaces). */
+export function pollResultText(question: string, results: ReturnType<typeof pollResults>) {
+  const winners = results.rows.filter((r) => r.winner);
+  const head =
+    winners.length > 1
+      ? `🤝 Empate entre ${winners.map((r) => `*${r.label}*`).join(" y ")} con un ${winners[0].percent}% cada una`
+      : `🏆 Gana *${winners[0].label}* con un ${winners[0].percent}% de los votos`;
+  const lines = [...results.rows]
+    .sort((a, b) => b.count - a.count)
+    .map((r) => `${r.winner ? "🥇" : "▫️"} ${r.label}: ${r.percent}%`);
+  const votes = `${results.total} ${results.total === 1 ? "voto" : "votos"}`;
+  return [`🗳️ *Resultado de la encuesta del Torneo Pádel Loyola*`, `*${question}*`, head, "", ...lines, "", votes].join("\n");
+}
+
 /**
  * La encuesta del inicio con sus opciones y los votos que puede ver este
  * jugador: el suyo mientras está abierta, todos cuando ya se ha cerrado.
