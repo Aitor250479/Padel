@@ -5,7 +5,7 @@ import { breakingFontSize, fitFontSize } from "@/lib/news";
 const name = "absolute -translate-y-1/2 overflow-hidden text-ellipsis whitespace-nowrap font-black uppercase italic leading-tight";
 
 // Casillas de enfrentamiento.png (1754x897), en porcentaje.
-const MATCHUP_ROWS = [72.1, 86.7];
+const MATCHUP_ROWS = [71.7, 86.3];
 const MATCHUP_LEFT = [7, 63.5];
 const MATCHUP_WIDTH = 29;
 
@@ -26,7 +26,7 @@ export function MatchupPoster({ a, b, caption }: { a: string[]; b: string[]; cap
                   left: `${MATCHUP_LEFT[side]}%`,
                   width: `${MATCHUP_WIDTH}%`,
                   top: `${top}%`,
-                  fontSize: `${fitFontSize(text, MATCHUP_WIDTH, 3.2)}cqw`,
+                  fontSize: `${fitFontSize(text, MATCHUP_WIDTH, 2.5, 1.9)}cqw`,
                 }}
               >
                 {text}
