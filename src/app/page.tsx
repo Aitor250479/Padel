@@ -26,6 +26,7 @@ import {
   NEWS_RESULTS_KEY,
   newsEnabled,
   newsOrder,
+  newsVariant,
   type NewsItem,
 } from "@/lib/news";
 import Notice from "@/components/Notice";
@@ -162,7 +163,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
                 );
               }
               const n = items.find((x) => x.id === id);
-              return n && <BreakingNews key={id} text={n.body} />;
+              return n && <BreakingNews key={id} text={n.body} variant={newsVariant(n.id)} />;
             })}
           </div>
         ) : (

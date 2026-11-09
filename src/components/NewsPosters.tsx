@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { parseSets } from "@/components/Scoreboard";
-import { breakingFontSize, fitFontSize } from "@/lib/news";
+import { breakingFontSize, breakingSize, fitFontSize } from "@/lib/news";
 
 const name =
   "absolute -translate-y-1/2 overflow-hidden text-ellipsis whitespace-nowrap font-black uppercase italic leading-tight";
@@ -284,28 +284,49 @@ export function ResultPoster({
   );
 }
 
-/** Noticia escrita por un organizador, en el cartel "Breaking news". */
-export function BreakingNews({ text }: { text: string }) {
+// Ocho carteles de "Breaking news": dos por tamaño (hasta 75, 150, 300 y 600
+// caracteres). Caja del texto en porcentaje del cartel: x0, x1, y0, y1.
+type BreakingTemplate = { src: string; w: number; h: number; box: [number, number, number, number] };
+const BREAKING_TEMPLATES: BreakingTemplate[][] = [
+  [
+    { src: "/breaking1.png", w: 521, h: 152, box: [6, 94, 61, 82] },
+    { src: "/breaking2.png", w: 521, h: 182, box: [5, 95, 59, 84] },
+  ],
+  [
+    { src: "/breaking3.png", w: 521, h: 243, box: [5, 95, 56, 86] },
+    { src: "/breaking4.png", w: 521, h: 243, box: [5, 95, 56, 86] },
+  ],
+  [
+    { src: "/breaking5.png", w: 521, h: 331, box: [5, 95, 37, 81] },
+    { src: "/breaking6.png", w: 521, h: 331, box: [5, 95, 37, 81] },
+  ],
+  [
+    { src: "/breaking7.png", w: 521, h: 585, box: [5, 95, 26, 85] },
+    { src: "/breaking8.png", w: 521, h: 584, box: [5, 95, 26, 85] },
+  ],
+];
+
+/**
+ * Noticia escrita por un organizador, en el cartel "Breaking news" del tamaño
+ * que necesita el texto. `variant` alterna entre los dos modelos de cada tamaño.
+ */
+export function BreakingNews({ text, variant = 0 }: { text: string; variant?: number }) {
+  const options = BREAKING_TEMPLATES[breakingSize(text)];
+  const t = options[variant % options.length];
+  const [x0, x1, y0, y1] = t.box;
+  const width = x1 - x0;
+  const height = ((y1 - y0) * t.h) / t.w;
   return (
-    <div
-      className="relative w-full [container-type:inline-size]"
-      style={{ aspectRatio: "1774 / 887" }}
-    >
-      <Image
-        src="/breaking.png"
-        alt="Breaking news"
-        fill
-        sizes="(max-width: 768px) 100vw, 720px"
-        className="object-contain"
-      />
+    <div className="relative w-full [container-type:inline-size]" style={{ aspectRatio: `${t.w} / ${t.h}` }}>
+      <Image src={t.src} alt="Breaking news" fill sizes="(max-width: 768px) 100vw, 720px" className="object-contain" />
       <p
         className="absolute flex items-center break-words font-extrabold leading-tight text-black"
         style={{
-          left: "29%",
-          right: "4%",
-          top: "33%",
-          bottom: "13%",
-          fontSize: `${breakingFontSize(text)}cqw`,
+          left: `${x0}%`,
+          right: `${100 - x1}%`,
+          top: `${y0}%`,
+          bottom: `${100 - y1}%`,
+          fontSize: `${breakingFontSize(text, width, height)}cqw`,
         }}
       >
         <span className="w-full">{text}</span>

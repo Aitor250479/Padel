@@ -15,6 +15,7 @@ import {
   NEWS_RESULTS_KEY,
   newsEnabled,
   newsOrder,
+  newsVariant,
   type NewsItem,
 } from "@/lib/news";
 import { HOME_MODE_KEY } from "@/lib/welcome";
@@ -183,7 +184,7 @@ export default async function NoticiasPage({
                 </div>
                 {n && (
                   <>
-                    <BreakingNews text={n.body} />
+                    <BreakingNews text={n.body} variant={newsVariant(n.id)} />
                     <details>
                       <summary className="cursor-pointer text-sm font-semibold underline">Editar o borrar</summary>
                       <form action={updateNews} className="mt-2 flex flex-col gap-2">

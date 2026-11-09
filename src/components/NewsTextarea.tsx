@@ -12,7 +12,7 @@ export default function NewsTextarea({ defaultValue = "", className }: { default
         name="body"
         defaultValue={defaultValue}
         maxLength={NEWS_MAX}
-        rows={3}
+        rows={5}
         required
         placeholder="Escribe la noticia"
         onChange={(e) => setLength([...e.target.value].length)}
