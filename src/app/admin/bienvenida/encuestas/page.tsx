@@ -5,7 +5,7 @@ import Notice from "@/components/Notice";
 import PollOptionsFields from "@/components/PollOptionsFields";
 import { requireOrganizer } from "@/lib/session";
 import { formatBooking } from "@/lib/matches";
-import { POLL_KEY, pollOpen, pollResults, type Poll, type PollOption, type PollVote } from "@/lib/polls";
+import { POLL_COLUMNS, RESULT_HOURS, pollOnHome, pollOpen, pollResults, type Poll, type PollOption, type PollVote } from "@/lib/polls";
 import { addDays, nowInSpain } from "@/lib/weeks";
 import { createPoll } from "./actions";
 
@@ -18,12 +18,11 @@ export default async function EncuestasPage({
 }) {
   const { supabase, profile } = await requireOrganizer();
   const { error, ok } = await searchParams;
-  const [{ data: polls }, { data: options }, { data: votes }, { data: current }] = await Promise.all([
-    supabase.from("polls").select("id, question, closes_at").order("created_at", { ascending: false }).returns<Poll[]>(),
+  const [{ data: polls }, { data: options }, { data: votes }] = await Promise.all([
+    supabase.from("polls").select(POLL_COLUMNS).order("created_at", { ascending: false }).returns<Poll[]>(),
     supabase.from("poll_options").select("id, poll_id, position, label").returns<PollOption[]>(),
     // Solo llegan los votos de las encuestas cerradas (y el mío de las abiertas).
     supabase.from("poll_votes").select("poll_id, profile_id, option_id").returns<(PollVote & { poll_id: string })[]>(),
-    supabase.from("site_texts").select("body").eq("key", POLL_KEY).maybeSingle<{ body: string }>(),
   ]);
   const now = nowInSpain();
   const tomorrow = addDays(now.slice(0, 10), 1);
@@ -42,8 +41,9 @@ export default async function EncuestasPage({
         <form action={createPoll} className="flex flex-col gap-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
           <h2 className="font-semibold">Encuesta nueva</h2>
           <p className="text-sm opacity-70">
-            Al crearla sustituye a la encuesta actual y pasa a verse en el inicio. Cada jugador vota una
-            vez y puede cambiar su voto hasta el cierre; nadie ve los votos de los demás hasta entonces.
+            Al crearla sale en el inicio de todos los jugadores como tarjeta. Cada jugador vota una vez y
+            puede cambiar su voto hasta el cierre; nadie ve los votos de los demás hasta entonces. Tras
+            el cierre, la tarjeta enseña el resultado durante el tiempo que elijas.
           </p>
           <textarea name="question" rows={2} maxLength={300} required placeholder="Pregunta" className={field} />
           <PollOptionsFields className={field} />
@@ -52,6 +52,17 @@ export default async function EncuestasPage({
             <input type="date" name="closes_day" defaultValue={tomorrow} required className={field} />
             <span>a las</span>
             <input type="time" name="closes_time" defaultValue="22:00" required className={field} />
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="font-semibold">Mostrar el resultado</span>
+            <select name="result_hours" defaultValue={48} className={field}>
+              {RESULT_HOURS.map((r) => (
+                <option key={r.hours} value={r.hours}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+            <span>tras el cierre</span>
           </div>
           <SubmitButton className="self-start rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white">
             Crear y publicar
@@ -64,7 +75,7 @@ export default async function EncuestasPage({
           <ul className="flex flex-col gap-2">
             {(polls ?? []).map((p) => {
               const open = pollOpen(p, now);
-              const isCurrent = p.id === current?.body;
+              const isOnHome = pollOnHome(p, now);
               const results = open
                 ? null
                 : pollResults(
@@ -84,7 +95,7 @@ export default async function EncuestasPage({
                       ) : (
                         <span className="rounded-full bg-gray-200 px-2 py-0.5 text-gray-800">Cerrada</span>
                       )}
-                      {isCurrent && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-900">Actual</span>}
+                      {isOnHome && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-900">En el inicio</span>}
                     </span>
                     <span className="block font-medium">{p.question}</span>
                     <span className="block text-sm opacity-70">

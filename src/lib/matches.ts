@@ -59,7 +59,13 @@ export async function loadPairDirectory(supabase: SupabaseClient) {
     return (players ?? []).filter((p) => p.pair_id === id).map((p) => p.id);
   };
   const isLeaguePair = (id: string) => leaguePairs.some((p) => p.id === id);
-  return { pairs, pairName, playersOf, pairsOf, sideOf, membersOf, isLeaguePair, players: players ?? [] };
+  /** Nombres de los jugadores de una pareja, uno a uno. */
+  const memberNames = (id: string) =>
+    membersOf(id).map((pid) => {
+      const p = players?.find((x) => x.id === pid);
+      return p ? displayName(p) : "Jugador";
+    });
+  return { pairs, pairName, playersOf, pairsOf, sideOf, membersOf, memberNames, isLeaguePair, players: players ?? [] };
 }
 
 const WEEKDAYS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];

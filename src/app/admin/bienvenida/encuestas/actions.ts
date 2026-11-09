@@ -15,7 +15,7 @@ function done(path: string, params: { ok?: string; error?: string }) {
   redirect(`${path}?${key}=${encodeURIComponent(value)}`);
 }
 
-/** Crea una encuesta nueva: sustituye a la actual y pasa a verse en el inicio. */
+/** Crea una encuesta nueva, que sale como tarjeta en el inicio de los jugadores. */
 export async function createPoll(formData: FormData) {
   const { supabase } = await requireOrganizer();
   const question = String(formData.get("question") ?? "").trim().slice(0, 300);
@@ -28,6 +28,7 @@ export async function createPoll(formData: FormData) {
     p_question: question,
     p_options: options,
     p_closes_at: `${day}T${time}:00`,
+    p_result_hours: Number(formData.get("result_hours") ?? 48) || 48,
   });
   if (error) return done(PATH, { error: friendlyError(error.message) });
   done(`${PATH}/${id}`, { ok: "Encuesta creada. Ya se ve en el inicio." });

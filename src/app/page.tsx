@@ -1,7 +1,8 @@
 import Link from "next/link";
 import Header from "@/components/Header";
-import Scoreboard from "@/components/Scoreboard";
 import Image from "next/image";
+import Carousel from "@/components/Carousel";
+import { BreakingNews, MatchupPoster, ResultPoster } from "@/components/NewsPosters";
 import { currentLeague, isIndividual, onlyLeague } from "@/lib/leagues";
 import {
   MATCH_COLUMNS,
@@ -16,20 +17,11 @@ import { myTodos, type Todo } from "@/lib/todo";
 import TodoList from "@/components/TodoList";
 import { requireProfile, type Profile } from "@/lib/session";
 import { HOME_MODE_KEY, WELCOME_KEY } from "@/lib/welcome";
-import { POLL_KEY, loadPoll } from "@/lib/polls";
-import PollCard from "@/components/PollCard";
+import { POLL_COLUMNS, addHoursLocal, pollOnHome, pollTodo, type Poll } from "@/lib/polls";
+import { NEWS_MATCHUPS_KEY, NEWS_RESULTS_KEY, newsEnabled, type NewsItem } from "@/lib/news";
 import Notice from "@/components/Notice";
 import { addDays, currentWeek, defaultWeek, formatWeekLong, nowInSpain } from "@/lib/weeks";
 
-type News = {
-  id: string;
-  week_start: string;
-  pair_a: string;
-  pair_b: string;
-  sets_a: number;
-  sets_b: number;
-  score_detail: string | null;
-};
 
 export default async function Home({
   searchParams,
@@ -43,35 +35,49 @@ export default async function Home({
   const { data: texts } = await supabase
     .from("site_texts")
     .select("key, body")
-    .in("key", [WELCOME_KEY, HOME_MODE_KEY, POLL_KEY])
+    .in("key", [WELCOME_KEY, HOME_MODE_KEY, NEWS_MATCHUPS_KEY, NEWS_RESULTS_KEY])
     .returns<{ key: string; body: string }[]>();
-  const mode = texts?.find((t) => t.key === HOME_MODE_KEY)?.body;
-  const showNews = mode === "noticias";
-  // Modo encuesta: si la encuesta ya no existe, se vuelve al texto de bienvenida.
-  const poll = mode === "encuesta" ? await loadPoll(supabase, texts?.find((t) => t.key === POLL_KEY)?.body) : null;
-  const text =
-    texts?.find((t) => t.key === WELCOME_KEY)?.body?.trim() || "¡Bienvenidos al Torneo Pádel Loyola! 🎾";
+  const get = (key: string) => texts?.find((t) => t.key === key)?.body;
+  const showNews = get(HOME_MODE_KEY) === "noticias";
+  const text = get(WELCOME_KEY)?.trim() || "¡Bienvenidos al Torneo Pádel Loyola! 🎾";
+  const now = nowInSpain();
+  const thisWeek = currentWeek();
+  const lastWeek = addDays(thisWeek, -7);
 
   const [league, directory] = await Promise.all([currentLeague(supabase), loadPairDirectory(supabase)]);
-  // Lo pendiente del jugador y las noticias se cargan a la vez.
-  const [todos, news] = await Promise.all([
+  const weekMatches = (week: string) =>
+    onlyLeague(supabase.from("matches").select(MATCH_COLUMNS), league)
+      .eq("week_start", week)
+      .neq("status", "cancelado")
+      .order("booking_at", { ascending: true, nullsFirst: false })
+      .returns<Match[]>()
+      .then(({ data }) => data ?? []);
+  // Lo pendiente del jugador, las encuestas y las noticias se cargan a la vez.
+  const [todos, polls, matchups, lastResults, items] = await Promise.all([
     profile.active !== false && (directory.pairsOf(profile).length || isIndividual(league))
       ? loadTodos(supabase, profile, directory.pairsOf(profile), league, directory)
       : Promise.resolve([]),
+    loadPollTodos(supabase, profile, now),
+    showNews && newsEnabled(get(NEWS_MATCHUPS_KEY)) ? weekMatches(thisWeek) : Promise.resolve([] as Match[]),
+    showNews && newsEnabled(get(NEWS_RESULTS_KEY))
+      ? weekMatches(lastWeek).then((ms) => ms.filter((m) => m.sets_a !== null && m.sets_b !== null))
+      : Promise.resolve([] as Match[]),
     showNews
-      ? onlyLeague(
-          supabase.from("matches").select("id, week_start, pair_a, pair_b, sets_a, sets_b, score_detail"),
-          league,
-        )
-          .not("sets_a", "is", null)
-          .neq("status", "cancelado")
-          .order("result_at", { ascending: false, nullsFirst: false })
-          .order("week_start", { ascending: false })
-          .limit(5)
-          .returns<News[]>()
+      ? supabase
+          .from("news_items")
+          .select("id, body, visible, created_at")
+          .eq("visible", true)
+          .order("created_at", { ascending: false })
+          .returns<NewsItem[]>()
           .then(({ data }) => data ?? [])
-      : Promise.resolve([] as News[]),
+      : Promise.resolve([] as NewsItem[]),
   ]);
+  const cards = [...todos, ...polls];
+  const hasNews = matchups.length + lastResults.length + items.length > 0;
+  const place = (m: Match) =>
+    m.booking_place || m.booking_at
+      ? `📍 ${[m.booking_place, formatBooking(m.booking_at)].filter(Boolean).join(" · ")}`
+      : "📍 Pendiente de reservar";
 
   return (
     <>
@@ -87,46 +93,59 @@ export default async function Home({
             priority
           />
         )}
-        {todos.length > 0 && <TodoList todos={todos} />}
+        {cards.length > 0 && <TodoList todos={cards} />}
         <Notice ok={notice.ok} error={notice.error} />
 
-        {poll ? (
-          <PollCard
-            poll={poll.poll}
-            options={poll.options}
-            votes={poll.votes}
-            me={profile.id}
-            now={nowInSpain()}
-            canVote={!inactive}
-          />
-        ) : showNews ? (
-          <section>
-            <h1 className="mb-4 text-center text-2xl font-black uppercase italic tracking-tight">
-              📰 Últimos resultados
-            </h1>
-            {news.length ? (
-              <div className="flex flex-col gap-6">
-                {news.map((m) => (
-                  <Scoreboard
-                    key={m.id}
-                    caption={`Semana del ${formatWeekLong(m.week_start)}`}
-                    detail={m.score_detail}
-                    a={{ name: directory.pairName(m.pair_a), players: directory.playersOf(m.pair_a), sets: m.sets_a }}
-                    b={{ name: directory.pairName(m.pair_b), players: directory.playersOf(m.pair_b), sets: m.sets_b }}
-                  />
-                ))}
-              </div>
-            ) : (
-              <Image
-                src="/sinresultados.png"
-                alt="La liga aún no ha empezado. Todavía no hay resultados"
-                width={1000}
-                height={333}
-                className="h-auto w-full"
-                priority
-              />
+        {showNews && hasNews ? (
+          <div className="flex flex-col gap-8">
+            {matchups.length > 0 && (
+              <section>
+                <h1 className={newsTitle}>⚔️ Enfrentamientos de la semana</h1>
+                <p className={newsSub}>Semana del {formatWeekLong(thisWeek)}</p>
+                <Carousel label="Enfrentamientos de la semana">
+                  {matchups.map((m) => (
+                    <MatchupPoster
+                      key={m.id}
+                      a={directory.memberNames(m.pair_a)}
+                      b={directory.memberNames(m.pair_b)}
+                      caption={[
+                        ...(directory.isLeaguePair(m.pair_a)
+                          ? []
+                          : [`${directory.pairName(m.pair_a)} vs ${directory.pairName(m.pair_b)}`]),
+                        place(m),
+                      ]}
+                    />
+                  ))}
+                </Carousel>
+              </section>
             )}
-          </section>
+            {lastResults.length > 0 && (
+              <section>
+                <h1 className={newsTitle}>🏁 Resultados de la última jornada</h1>
+                <p className={newsSub}>Semana del {formatWeekLong(lastWeek)}</p>
+                <Carousel label="Resultados de la última jornada">
+                  {lastResults.map((m) => (
+                    <ResultPoster
+                      key={m.id}
+                      detail={m.score_detail}
+                      a={{ name: directory.pairName(m.pair_a), players: directory.playersOf(m.pair_a), sets: m.sets_a! }}
+                      b={{ name: directory.pairName(m.pair_b), players: directory.playersOf(m.pair_b), sets: m.sets_b! }}
+                    />
+                  ))}
+                </Carousel>
+              </section>
+            )}
+            {items.length > 0 && (
+              <section>
+                <h1 className={newsTitle}>📰 Noticias</h1>
+                <div className="flex flex-col gap-4">
+                  {items.map((n) => (
+                    <BreakingNews key={n.id} text={n.body} />
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
         ) : (
           <section className="whitespace-pre-line rounded-2xl border-l-4 border-lime-400 bg-neutral-50 p-5 text-lg leading-relaxed shadow-sm dark:bg-neutral-900">
             {text}
@@ -149,7 +168,48 @@ export default async function Home({
   );
 }
 
+const newsTitle = "text-center text-2xl font-black uppercase italic tracking-tight";
+const newsSub = "mb-2 text-center text-xs font-semibold opacity-60";
+
 type Directory = Awaited<ReturnType<typeof loadPairDirectory>>;
+
+/** Tarjetas de las encuestas abiertas y de las cerradas que aún enseñan su resultado. */
+async function loadPollTodos(
+  supabase: Awaited<ReturnType<typeof requireProfile>>["supabase"],
+  profile: Profile,
+  now: string,
+): Promise<Todo[]> {
+  // El resultado se enseña como mucho 720 horas (30 días) tras el cierre.
+  const { data: polls } = await supabase
+    .from("polls")
+    .select(POLL_COLUMNS)
+    .gte("closes_at", addHoursLocal(now, -720))
+    .order("closes_at", { ascending: true })
+    .returns<Poll[]>();
+  const shown = (polls ?? []).filter((p) => pollOnHome(p, now));
+  if (!shown.length) return [];
+  const { data: mine } = await supabase
+    .from("poll_votes")
+    .select("poll_id")
+    .eq("profile_id", profile.id)
+    .in(
+      "poll_id",
+      shown.map((p) => p.id),
+    )
+    .returns<{ poll_id: string }[]>();
+  // Primero las abiertas, luego los resultados.
+  return shown
+    .map((p) =>
+      pollTodo(p, {
+        now,
+        voted: !!mine?.some((v) => v.poll_id === p.id),
+        canVote: profile.active !== false,
+        formatBooking: (at) => formatBooking(at),
+      }),
+    )
+    .filter((t): t is Todo => !!t)
+    .sort((a, b) => Number(a.icon === "📊") - Number(b.icon === "📊"));
+}
 
 /** Lo que el jugador tiene pendiente: resultados, próximos partidos y disponibilidad. */
 async function loadTodos(

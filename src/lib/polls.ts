@@ -1,8 +1,69 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export const POLL_KEY = "encuesta_actual";
+export type Poll = { id: string; question: string; closes_at: string; result_hours: number };
 
-export type Poll = { id: string; question: string; closes_at: string };
+export const POLL_COLUMNS = "id, question, closes_at, result_hours";
+
+/** Opciones del desplegable "Mostrar el resultado … tras el cierre". */
+export const RESULT_HOURS = [
+  { hours: 12, label: "12 horas" },
+  { hours: 24, label: "24 horas" },
+  { hours: 48, label: "48 horas" },
+  { hours: 72, label: "3 días" },
+  { hours: 168, label: "1 semana" },
+];
+
+/** Suma horas a una hora local "YYYY-MM-DDTHH:MM[:SS]" y devuelve "YYYY-MM-DDTHH:MM". */
+export function addHoursLocal(local: string, hours: number) {
+  const [d, t = "00:00"] = local.split("T");
+  const [y, mo, da] = d.split("-").map(Number);
+  const [h, mi] = t.split(":").map(Number);
+  return new Date(Date.UTC(y, mo - 1, da, h + hours, mi)).toISOString().slice(0, 16);
+}
+
+/** Hasta cuándo se enseña el resultado de la encuesta en el inicio. */
+export function pollResultUntil(poll: Pick<Poll, "closes_at" | "result_hours">) {
+  return addHoursLocal(poll.closes_at, poll.result_hours ?? 48);
+}
+
+/** ¿Sale la encuesta en el inicio? Mientras está abierta y el tiempo elegido tras el cierre. */
+export function pollOnHome(poll: Pick<Poll, "closes_at" | "result_hours">, now: string) {
+  return now.slice(0, 16) < pollResultUntil(poll);
+}
+
+export type PollTodo = {
+  tone: "action" | "info";
+  icon: string;
+  title: string;
+  text: string;
+  href: string;
+};
+
+/** Tarjeta de la encuesta para el inicio de un jugador. */
+export function pollTodo(
+  poll: Poll,
+  i: { now: string; voted: boolean; canVote: boolean; formatBooking: (at: string) => string | null },
+): PollTodo | null {
+  if (!pollOnHome(poll, i.now)) return null;
+  const href = `/encuesta/${poll.id}`;
+  const closes = i.formatBooking(poll.closes_at);
+  if (!pollOpen(poll, i.now)) {
+    return { tone: "info", icon: "📊", title: "Ya está el resultado de la encuesta", text: `${poll.question} · Toca para verlo`, href };
+  }
+  if (!i.canVote) {
+    return { tone: "info", icon: "🗳️", title: "Encuesta abierta", text: `${poll.question} · Cierra el ${closes}`, href };
+  }
+  if (i.voted) {
+    return {
+      tone: "info",
+      icon: "🗳️",
+      title: "Ya has votado en la encuesta",
+      text: `${poll.question} · Puedes cambiar tu voto hasta el ${closes}`,
+      href,
+    };
+  }
+  return { tone: "action", icon: "🗳️", title: "Encuesta abierta: ¡aún no has votado!", text: `${poll.question} · Cierra el ${closes}`, href };
+}
 export type PollOption = { id: string; poll_id: string; position: number; label: string };
 export type PollVote = { profile_id: string; option_id: string };
 
@@ -39,13 +100,13 @@ export function pollResultText(question: string, results: ReturnType<typeof poll
 }
 
 /**
- * La encuesta del inicio con sus opciones y los votos que puede ver este
- * jugador: el suyo mientras está abierta, todos cuando ya se ha cerrado.
+ * Una encuesta con sus opciones y los votos que puede ver este jugador: el
+ * suyo mientras está abierta, todos cuando ya se ha cerrado.
  */
 export async function loadPoll(supabase: SupabaseClient, pollId: string | null | undefined) {
   if (!pollId) return null;
   const [{ data: poll }, { data: options }, { data: votes }] = await Promise.all([
-    supabase.from("polls").select("id, question, closes_at").eq("id", pollId).maybeSingle<Poll>(),
+    supabase.from("polls").select(POLL_COLUMNS).eq("id", pollId).maybeSingle<Poll>(),
     supabase.from("poll_options").select("id, poll_id, position, label").eq("poll_id", pollId).order("position").returns<PollOption[]>(),
     supabase.from("poll_votes").select("profile_id, option_id").eq("poll_id", pollId).returns<PollVote[]>(),
   ]);
