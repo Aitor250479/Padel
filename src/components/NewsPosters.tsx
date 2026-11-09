@@ -2,11 +2,17 @@ import Image from "next/image";
 import { parseSets } from "@/components/Scoreboard";
 import { breakingFontSize, fitFontSize } from "@/lib/news";
 
-const name = "absolute -translate-y-1/2 overflow-hidden text-ellipsis whitespace-nowrap font-black uppercase italic leading-tight";
+const name =
+  "absolute -translate-y-1/2 overflow-hidden text-ellipsis whitespace-nowrap font-black uppercase italic leading-tight";
 
 // Cuatro modelos de cartel de enfrentamiento con la misma maqueta (1672x941); cada
 // partido del carrusel usa uno distinto y se repiten a partir del quinto.
-const MATCHUP_TEMPLATES = ["/enfrentamiento1.png", "/enfrentamiento2.png", "/enfrentamiento3.png", "/enfrentamiento4.png"];
+const MATCHUP_TEMPLATES = [
+  "/enfrentamiento1.png",
+  "/enfrentamiento2.png",
+  "/enfrentamiento3.png",
+  "/enfrentamiento4.png",
+];
 // Casillas de los nombres, en porcentaje.
 const MATCHUP_ROWS = [76.8, 90.2];
 const MATCHUP_LEFT = [12.5, 60];
@@ -27,8 +33,17 @@ export function MatchupPoster({
   const src = MATCHUP_TEMPLATES[variant % MATCHUP_TEMPLATES.length];
   return (
     <figure className="w-full">
-      <div className="relative w-full [container-type:inline-size]" style={{ aspectRatio: "1672 / 941" }}>
-        <Image src={src} alt="Próximo enfrentamiento" fill sizes="(max-width: 768px) 100vw, 720px" className="object-contain" />
+      <div
+        className="relative w-full [container-type:inline-size]"
+        style={{ aspectRatio: "1672 / 941" }}
+      >
+        <Image
+          src={src}
+          alt="Próximo enfrentamiento"
+          fill
+          sizes="(max-width: 768px) 100vw, 720px"
+          className="object-contain"
+        />
         {[a, b].map((players, side) =>
           MATCHUP_ROWS.map((top, r) => {
             const text = players[r] ?? "";
@@ -58,15 +73,121 @@ export function MatchupPoster({
   );
 }
 
-// Cuatro modelos de cartel de resultado (sin las rayas de escribir) con la misma maqueta; cada partido del
-// carrusel usa uno distinto y se repiten a partir del quinto. Casillas en porcentaje.
-const RESULT_TEMPLATES = ["/resultado1.png", "/resultado2.png", "/resultado3.png", "/resultado4.png"];
-const RESULT_NAME_TOP = [72.6, 86.4];
-const RESULT_SUB_TOP = [78.2, 92.0];
-const RESULT_SET_LEFT = [65.2, 77.5, 90.0];
-const RESULT_SET_TOP = [76.6, 89.2];
-const RESULT_LEFT = 13.5;
-const RESULT_WIDTH = 43;
+// Ocho modelos de cartel de resultado (sin las rayas de escribir); cada partido del
+// carrusel usa uno distinto y se repiten a partir del noveno. Por modelo, en
+// porcentaje del cartel: zona del nombre (x), filas de cada pareja (y) y casillas
+// de los sets (x).
+type ResultTemplate = {
+  src: string;
+  w: number;
+  h: number;
+  name: [number, number];
+  rows: [number, number][];
+  sets: [number, number][];
+};
+const PRESS: Omit<ResultTemplate, "src" | "w" | "h" | "rows"> = {
+  name: [13.8, 45.8],
+  sets: [
+    [46.2, 58.8],
+    [59.2, 71.9],
+    [72.4, 86.1],
+  ],
+};
+const SHIRTS: Omit<ResultTemplate, "src" | "w" | "h" | "rows"> = {
+  name: [19.5, 57],
+  sets: [
+    [58.4, 69.2],
+    [70.5, 81.2],
+    [82.6, 93.6],
+  ],
+};
+const RESULT_TEMPLATES: ResultTemplate[] = [
+  {
+    src: "/resultado1.png",
+    w: 861,
+    h: 432,
+    ...PRESS,
+    rows: [
+      [68.1, 81.0],
+      [82.2, 94.8],
+    ],
+  },
+  {
+    src: "/resultado2.png",
+    w: 861,
+    h: 433,
+    name: [35.4, 60.6],
+    rows: [
+      [30.9, 44.3],
+      [45.3, 58.9],
+    ],
+    sets: [
+      [61.1, 70.3],
+      [70.7, 79.9],
+      [80.4, 90.2],
+    ],
+  },
+  {
+    src: "/resultado3.png",
+    w: 861,
+    h: 433,
+    ...PRESS,
+    rows: [
+      [69.5, 82.7],
+      [83.6, 96.3],
+    ],
+  },
+  {
+    src: "/resultado4.png",
+    w: 861,
+    h: 432,
+    ...PRESS,
+    rows: [
+      [69.4, 82.6],
+      [83.6, 96.3],
+    ],
+  },
+  {
+    src: "/resultado5.png",
+    w: 831,
+    h: 464,
+    ...SHIRTS,
+    rows: [
+      [69.0, 80.2],
+      [83.8, 95.0],
+    ],
+  },
+  {
+    src: "/resultado6.png",
+    w: 830,
+    h: 464,
+    ...SHIRTS,
+    rows: [
+      [69.0, 80.2],
+      [83.8, 95.0],
+    ],
+  },
+  {
+    src: "/resultado7.png",
+    w: 831,
+    h: 465,
+    ...SHIRTS,
+    rows: [
+      [70.5, 81.1],
+      [84.5, 95.3],
+    ],
+  },
+  {
+    src: "/resultado8.png",
+    w: 830,
+    h: 465,
+    ...SHIRTS,
+    rows: [
+      [70.5, 81.1],
+      [84.5, 95.3],
+    ],
+  },
+];
 
 type ResultSide = { name: string; players: string; sets: number };
 
@@ -82,12 +203,23 @@ export function ResultPoster({
   detail: string | null;
   variant?: number;
 }) {
-  const src = RESULT_TEMPLATES[variant % RESULT_TEMPLATES.length];
+  const t = RESULT_TEMPLATES[variant % RESULT_TEMPLATES.length];
   const games = parseSets(detail);
   const rows = [a, b];
+  const left = t.name[0] + 1.5;
+  const width = t.name[1] - left - 1;
   return (
-    <div className="relative w-full [container-type:inline-size]" style={{ aspectRatio: "869 / 443" }}>
-      <Image src={src} alt="Resultado del partido" fill sizes="(max-width: 768px) 100vw, 720px" className="object-contain" />
+    <div
+      className="relative w-full [container-type:inline-size]"
+      style={{ aspectRatio: `${t.w} / ${t.h}` }}
+    >
+      <Image
+        src={t.src}
+        alt="Resultado del partido"
+        fill
+        sizes="(max-width: 768px) 100vw, 720px"
+        className="object-contain"
+      />
       {rows.map((side, r) => {
         const other = rows[1 - r];
         const won = side.sets > other.sets;
@@ -99,15 +231,18 @@ export function ResultPoster({
             ? `empate ${side.sets}-${other.sets}`
             : `${won ? "ganan" : "pierden"} ${side.sets}-${other.sets}`;
         const sub = [score, side.players].filter(Boolean).join(" · ");
+        const [y0, y1] = t.rows[r];
+        // Alto de la fila en cqw (porcentaje del ancho del cartel).
+        const rowCqw = ((y1 - y0) * t.h) / t.w;
         return (
           <div key={r}>
             <span
               className={`${name} ${won ? "text-red-600" : "text-black"}`}
               style={{
-                left: `${RESULT_LEFT}%`,
-                width: `${RESULT_WIDTH}%`,
-                top: `${RESULT_NAME_TOP[r]}%`,
-                fontSize: `${fitFontSize(title, RESULT_WIDTH, 3.3)}cqw`,
+                left: `${left}%`,
+                width: `${width}%`,
+                top: `${y0 + (y1 - y0) * 0.33}%`,
+                fontSize: `${fitFontSize(title, width, Math.min(3.3, rowCqw * 0.42))}cqw`,
               }}
             >
               {title}
@@ -116,23 +251,27 @@ export function ResultPoster({
               <span
                 className="absolute -translate-y-1/2 overflow-hidden text-ellipsis whitespace-nowrap font-semibold leading-tight text-black/75"
                 style={{
-                  left: `${RESULT_LEFT}%`,
-                  width: `${RESULT_WIDTH}%`,
-                  top: `${RESULT_SUB_TOP[r]}%`,
-                  fontSize: `${Math.max(1.7, Math.min(2.3, RESULT_WIDTH / ([...sub].length * 0.58)))}cqw`,
+                  left: `${left}%`,
+                  width: `${width}%`,
+                  top: `${y0 + (y1 - y0) * 0.75}%`,
+                  fontSize: `${Math.max(1.6, Math.min(2.3, width / ([...sub].length * 0.58)))}cqw`,
                 }}
               >
                 {sub}
               </span>
             )}
-            {RESULT_SET_LEFT.map((left, s) => {
+            {t.sets.map(([x0, x1], s) => {
               const g = games[s];
               if (!g) return null;
               return (
                 <span
                   key={s}
                   className={`absolute -translate-x-1/2 -translate-y-1/2 font-black tabular-nums ${g[r] > g[1 - r] ? "text-red-600" : "text-black"}`}
-                  style={{ left: `${left}%`, top: `${RESULT_SET_TOP[r]}%`, fontSize: "5.5cqw" }}
+                  style={{
+                    left: `${(x0 + x1) / 2}%`,
+                    top: `${(y0 + y1) / 2}%`,
+                    fontSize: `${Math.min(rowCqw * 0.7, (x1 - x0) * 0.6)}cqw`,
+                  }}
                 >
                   {g[r]}
                 </span>
@@ -148,11 +287,26 @@ export function ResultPoster({
 /** Noticia escrita por un organizador, en el cartel "Breaking news". */
 export function BreakingNews({ text }: { text: string }) {
   return (
-    <div className="relative w-full [container-type:inline-size]" style={{ aspectRatio: "1774 / 887" }}>
-      <Image src="/breaking.png" alt="Breaking news" fill sizes="(max-width: 768px) 100vw, 720px" className="object-contain" />
+    <div
+      className="relative w-full [container-type:inline-size]"
+      style={{ aspectRatio: "1774 / 887" }}
+    >
+      <Image
+        src="/breaking.png"
+        alt="Breaking news"
+        fill
+        sizes="(max-width: 768px) 100vw, 720px"
+        className="object-contain"
+      />
       <p
         className="absolute flex items-center break-words font-extrabold leading-tight text-black"
-        style={{ left: "29%", right: "4%", top: "33%", bottom: "13%", fontSize: `${breakingFontSize(text)}cqw` }}
+        style={{
+          left: "29%",
+          right: "4%",
+          top: "33%",
+          bottom: "13%",
+          fontSize: `${breakingFontSize(text)}cqw`,
+        }}
       >
         <span className="w-full">{text}</span>
       </p>
