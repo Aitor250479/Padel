@@ -19,17 +19,25 @@ const OK_TEXT: Record<HomeMode, string> = {
   noticias: "Guardado. El inicio muestra ahora las noticias activadas.",
 };
 
-export async function saveWelcome(formData: FormData) {
+/** Qué se ve en el inicio: el texto de bienvenida o las noticias. */
+export async function saveHomeMode(formData: FormData) {
   const { supabase, profile } = await requireOrganizer();
-  const body = String(formData.get("body") ?? "").trim();
-  const raw = formData.get("modo");
-  const mode: HomeMode = raw === "noticias" ? raw : "texto";
-  const now = new Date().toISOString();
-
-  const { error } = await supabase.from("site_texts").upsert([
-    { key: WELCOME_KEY, body, updated_at: now, updated_by: profile.id },
-    { key: HOME_MODE_KEY, body: mode, updated_at: now, updated_by: profile.id },
-  ]);
+  const mode: HomeMode = formData.get("modo") === "noticias" ? "noticias" : "texto";
+  const { error } = await supabase
+    .from("site_texts")
+    .upsert({ key: HOME_MODE_KEY, body: mode, updated_at: new Date().toISOString(), updated_by: profile.id });
   if (error) return done({ error: friendlyError(error.message) });
   done({ ok: OK_TEXT[mode] });
+}
+
+/** Guarda el texto de bienvenida (desde su propio apartado). */
+export async function saveWelcomeText(formData: FormData) {
+  const { supabase, profile } = await requireOrganizer();
+  const body = String(formData.get("body") ?? "").trim();
+  const { error } = await supabase
+    .from("site_texts")
+    .upsert({ key: WELCOME_KEY, body, updated_at: new Date().toISOString(), updated_by: profile.id });
+  revalidatePath("/", "layout");
+  const [key, value] = error ? ["error", friendlyError(error.message)] : ["ok", "Texto de bienvenida guardado."];
+  redirect(`${PATH}/texto?${key}=${encodeURIComponent(value)}`);
 }

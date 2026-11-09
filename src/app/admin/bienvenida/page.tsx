@@ -9,7 +9,7 @@ import { POLL_COLUMNS, addHoursLocal, pollOnHome, pollOpen, type Poll } from "@/
 import { NEWS_MATCHUPS_KEY, NEWS_RESULTS_KEY, newsEnabled } from "@/lib/news";
 import { HOME_MODE_KEY, WELCOME_KEY, type HomeMode } from "@/lib/welcome";
 import { nowInSpain } from "@/lib/weeks";
-import { saveWelcome } from "./actions";
+import { saveHomeMode } from "./actions";
 
 export default async function BienvenidaPage({
   searchParams,
@@ -55,14 +55,14 @@ export default async function BienvenidaPage({
           tarjetas, encima de todo.
         </p>
         <Notice ok={ok} error={error} />
-        <form action={saveWelcome} className="flex flex-col gap-4">
+        <form action={saveHomeMode} className="flex flex-col gap-4">
           <fieldset className="grid gap-2 sm:grid-cols-2">
             <legend className="mb-2 font-semibold">En el inicio mostrar</legend>
             <label className={option}>
               <input type="radio" name="modo" value="texto" defaultChecked={mode === "texto"} className="mt-1" />
               <span>
                 <span className="block font-semibold">✍️ El texto de bienvenida</span>
-                <span className="block text-sm opacity-70">El que escribas aquí abajo.</span>
+                <span className="block text-sm opacity-70">El que escribas en Texto de bienvenida.</span>
               </span>
             </label>
             <label className={option}>
@@ -76,21 +76,23 @@ export default async function BienvenidaPage({
             </label>
           </fieldset>
 
-          <label className="flex flex-col gap-1">
-            <span className="font-semibold">Texto de bienvenida</span>
-            <span className="text-sm opacity-70">Los saltos de línea se respetan.</span>
-            <textarea
-              name="body"
-              defaultValue={text}
-              rows={10}
-              className="w-full rounded-lg border border-gray-300 p-3 text-black"
-              placeholder="Escribe aquí el texto de bienvenida"
-            />
-          </label>
           <SubmitButton className="self-start rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white">
             Guardar
           </SubmitButton>
         </form>
+
+        <section className="mt-8 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+          <h2 className="mb-1 font-semibold">✍️ Texto de bienvenida</h2>
+          <p className="mb-3 line-clamp-3 whitespace-pre-line text-sm opacity-70">
+            {text.trim() || "Todavía no hay texto: se muestra «¡Bienvenidos al Torneo Pádel Loyola! 🎾»."}
+          </p>
+          <Link
+            href="/admin/bienvenida/texto"
+            className="inline-block rounded-lg bg-gray-800 px-4 py-2 font-semibold text-white"
+          >
+            Entrar en Texto de bienvenida
+          </Link>
+        </section>
 
         <section className="mt-8 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
           <h2 className="mb-1 font-semibold">🗳️ Encuestas</h2>

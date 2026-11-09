@@ -30,3 +30,29 @@ export function fitFontSize(text: string, width: number, max: number, min = 2.2)
   // Mayúsculas en negrita cursiva: unos 0,72 em de ancho por letra.
   return Math.max(min, Math.min(max, width / (n * 0.72)));
 }
+
+/** Orden de las noticias en el inicio (ids separados por comas, en site_texts). */
+export const NEWS_ORDER_KEY = "noticias_orden";
+/** Ids de las dos noticias fijas dentro del orden. */
+export const FIXED_MATCHUPS = "enfrentamientos";
+export const FIXED_RESULTS = "resultados";
+
+/**
+ * Orden completo: el guardado, sin ids que ya no existen, y al final lo que
+ * falte (por defecto las dos fijas y luego las propias, de la más nueva a la más antigua).
+ */
+export function newsOrder(saved: string | undefined, customIds: string[]) {
+  const all = [FIXED_MATCHUPS, FIXED_RESULTS, ...customIds];
+  const kept = [...new Set((saved ?? "").split(",").filter((id) => all.includes(id)))];
+  return [...kept, ...all.filter((id) => !kept.includes(id))];
+}
+
+/** Sube (-1) o baja (+1) una noticia un puesto. */
+export function moveInOrder(order: string[], id: string, dir: -1 | 1) {
+  const i = order.indexOf(id);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= order.length) return order;
+  const next = [...order];
+  [next[i], next[j]] = [next[j], next[i]];
+  return next;
+}

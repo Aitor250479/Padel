@@ -18,16 +18,20 @@ import TodoList from "@/components/TodoList";
 import { requireProfile, type Profile } from "@/lib/session";
 import { HOME_MODE_KEY, WELCOME_KEY } from "@/lib/welcome";
 import { POLL_COLUMNS, addHoursLocal, pollOnHome, pollTodo, type Poll } from "@/lib/polls";
-import { NEWS_MATCHUPS_KEY, NEWS_RESULTS_KEY, newsEnabled, type NewsItem } from "@/lib/news";
+import {
+  FIXED_MATCHUPS,
+  FIXED_RESULTS,
+  NEWS_MATCHUPS_KEY,
+  NEWS_ORDER_KEY,
+  NEWS_RESULTS_KEY,
+  newsEnabled,
+  newsOrder,
+  type NewsItem,
+} from "@/lib/news";
 import Notice from "@/components/Notice";
 import { addDays, currentWeek, defaultWeek, formatWeekLong, nowInSpain } from "@/lib/weeks";
 
-
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{ ok?: string; error?: string }>;
-}) {
+export default async function Home({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
   const { supabase, profile } = await requireProfile();
   const notice = await searchParams;
   // Desactivado: entra a consultar, con su imagen arriba y sin tareas pendientes.
@@ -35,7 +39,7 @@ export default async function Home({
   const { data: texts } = await supabase
     .from("site_texts")
     .select("key, body")
-    .in("key", [WELCOME_KEY, HOME_MODE_KEY, NEWS_MATCHUPS_KEY, NEWS_RESULTS_KEY])
+    .in("key", [WELCOME_KEY, HOME_MODE_KEY, NEWS_MATCHUPS_KEY, NEWS_RESULTS_KEY, NEWS_ORDER_KEY])
     .returns<{ key: string; body: string }[]>();
   const get = (key: string) => texts?.find((t) => t.key === key)?.body;
   const showNews = get(HOME_MODE_KEY) === "noticias";
@@ -98,53 +102,66 @@ export default async function Home({
 
         {showNews && hasNews ? (
           <div className="flex flex-col gap-8">
-            {matchups.length > 0 && (
-              <section>
-                <h1 className={newsTitle}>⚔️ Enfrentamientos de la semana</h1>
-                <p className={newsSub}>Semana del {formatWeekLong(thisWeek)}</p>
-                <Carousel label="Enfrentamientos de la semana">
-                  {matchups.map((m) => (
-                    <MatchupPoster
-                      key={m.id}
-                      a={directory.memberNames(m.pair_a)}
-                      b={directory.memberNames(m.pair_b)}
-                      caption={[
-                        ...(directory.isLeaguePair(m.pair_a)
-                          ? []
-                          : [`${directory.pairName(m.pair_a)} vs ${directory.pairName(m.pair_b)}`]),
-                        place(m),
-                      ]}
-                    />
-                  ))}
-                </Carousel>
-              </section>
-            )}
-            {lastResults.length > 0 && (
-              <section>
-                <h1 className={newsTitle}>🏁 Resultados de la última jornada</h1>
-                <p className={newsSub}>Semana del {formatWeekLong(lastWeek)}</p>
-                <Carousel label="Resultados de la última jornada">
-                  {lastResults.map((m) => (
-                    <ResultPoster
-                      key={m.id}
-                      detail={m.score_detail}
-                      a={{ name: directory.pairName(m.pair_a), players: directory.playersOf(m.pair_a), sets: m.sets_a! }}
-                      b={{ name: directory.pairName(m.pair_b), players: directory.playersOf(m.pair_b), sets: m.sets_b! }}
-                    />
-                  ))}
-                </Carousel>
-              </section>
-            )}
-            {items.length > 0 && (
-              <section>
-                <h1 className={newsTitle}>📰 Noticias</h1>
-                <div className="flex flex-col gap-4">
-                  {items.map((n) => (
-                    <BreakingNews key={n.id} text={n.body} />
-                  ))}
-                </div>
-              </section>
-            )}
+            {newsOrder(
+              get(NEWS_ORDER_KEY),
+              items.map((n) => n.id),
+            ).map((id) => {
+              if (id === FIXED_MATCHUPS) {
+                return (
+                  matchups.length > 0 && (
+                    <section key={id}>
+                      <h1 className={newsTitle}>⚔️ Enfrentamientos de la semana</h1>
+                      <p className={newsSub}>Semana del {formatWeekLong(thisWeek)}</p>
+                      <Carousel label="Enfrentamientos de la semana">
+                        {matchups.map((m) => (
+                          <MatchupPoster
+                            key={m.id}
+                            a={directory.memberNames(m.pair_a)}
+                            b={directory.memberNames(m.pair_b)}
+                            caption={[
+                              ...(directory.isLeaguePair(m.pair_a)
+                                ? []
+                                : [`${directory.pairName(m.pair_a)} vs ${directory.pairName(m.pair_b)}`]),
+                              place(m),
+                            ]}
+                          />
+                        ))}
+                      </Carousel>
+                    </section>
+                  )
+                );
+              }
+              if (id === FIXED_RESULTS) {
+                return (
+                  lastResults.length > 0 && (
+                    <section key={id}>
+                      <h1 className={newsTitle}>🏁 Resultados de la última jornada</h1>
+                      <p className={newsSub}>Semana del {formatWeekLong(lastWeek)}</p>
+                      <Carousel label="Resultados de la última jornada">
+                        {lastResults.map((m) => (
+                          <ResultPoster
+                            key={m.id}
+                            detail={m.score_detail}
+                            a={{
+                              name: directory.pairName(m.pair_a),
+                              players: directory.playersOf(m.pair_a),
+                              sets: m.sets_a!,
+                            }}
+                            b={{
+                              name: directory.pairName(m.pair_b),
+                              players: directory.playersOf(m.pair_b),
+                              sets: m.sets_b!,
+                            }}
+                          />
+                        ))}
+                      </Carousel>
+                    </section>
+                  )
+                );
+              }
+              const n = items.find((x) => x.id === id);
+              return n && <BreakingNews key={id} text={n.body} />;
+            })}
           </div>
         ) : (
           <section className="whitespace-pre-line rounded-2xl border-l-4 border-lime-400 bg-neutral-50 p-5 text-lg leading-relaxed shadow-sm dark:bg-neutral-900">
@@ -154,11 +171,16 @@ export default async function Home({
 
         {!inactive && ((!profile.pair_id && !isIndividual(league)) || !profile.full_name) && (
           <div className="mt-4 flex flex-col gap-1 text-sm opacity-80">
-            {!profile.pair_id && !isIndividual(league) && <p>Todavía no tienes pareja asignada. Un organizador te la asignará pronto.</p>}
+            {!profile.pair_id && !isIndividual(league) && (
+              <p>Todavía no tienes pareja asignada. Un organizador te la asignará pronto.</p>
+            )}
             {!profile.full_name && (
               <p>
-                Pon tu nombre en <Link href="/perfil" className="underline">Mi perfil</Link> para que
-                los demás te reconozcan.
+                Pon tu nombre en{" "}
+                <Link href="/perfil" className="underline">
+                  Mi perfil
+                </Link>{" "}
+                para que los demás te reconozcan.
               </p>
             )}
           </div>
@@ -225,14 +247,14 @@ async function loadTodos(
     !pairIds.length
       ? Promise.resolve({ data: [] as Match[] })
       : onlyLeague(
-      supabase
-        .from("matches")
-        .select(MATCH_COLUMNS)
-        .or(`pair_a.in.(${pairIds.join(",")}),pair_b.in.(${pairIds.join(",")})`)
-        .neq("status", "cancelado")
-        .is("sets_a", null),
-      league,
-    ).returns<Match[]>(),
+          supabase
+            .from("matches")
+            .select(MATCH_COLUMNS)
+            .or(`pair_a.in.(${pairIds.join(",")}),pair_b.in.(${pairIds.join(",")})`)
+            .neq("status", "cancelado")
+            .is("sets_a", null),
+          league,
+        ).returns<Match[]>(),
     supabase
       .from("player_availability")
       .select("can_play")
