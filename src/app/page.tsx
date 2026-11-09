@@ -113,9 +113,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
                       <h1 className={newsTitle}>⚔️ Enfrentamientos de la semana</h1>
                       <p className={newsSub}>Semana del {formatWeekLong(thisWeek)}</p>
                       <Carousel label="Enfrentamientos de la semana">
-                        {matchups.map((m) => (
+                        {matchups.map((m, i) => (
                           <MatchupPoster
                             key={m.id}
+                            variant={i}
                             a={directory.memberNames(m.pair_a)}
                             b={directory.memberNames(m.pair_b)}
                             caption={[

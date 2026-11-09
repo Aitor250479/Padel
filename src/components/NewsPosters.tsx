@@ -4,19 +4,36 @@ import { breakingFontSize, fitFontSize } from "@/lib/news";
 
 const name = "absolute -translate-y-1/2 overflow-hidden text-ellipsis whitespace-nowrap font-black uppercase italic leading-tight";
 
-// Casillas de enfrentamiento.png (1754x897), en porcentaje.
-const MATCHUP_ROWS = [71.7, 86.3];
-const MATCHUP_LEFT = [7, 63.5];
-const MATCHUP_WIDTH = 29;
+// Cuatro modelos de cartel de enfrentamiento; cada partido del carrusel usa
+// uno distinto y se repiten a partir del quinto. Casillas en porcentaje.
+const MATCHUP_TEMPLATES = [
+  { src: "/enfrentamiento1.png", aspect: "744 / 463", rows: [73.6, 87.4] },
+  { src: "/enfrentamiento2.png", aspect: "744 / 463", rows: [73.7, 87.5] },
+  { src: "/enfrentamiento3.png", aspect: "744 / 465", rows: [75.3, 89.1] },
+  { src: "/enfrentamiento4.png", aspect: "744 / 465", rows: [76.0, 89.6] },
+];
+const MATCHUP_LEFT = [6.5, 61.2];
+const MATCHUP_WIDTH = 32;
 
 /** Cartel "Próximo enfrentamiento" con los dos jugadores de cada lado. */
-export function MatchupPoster({ a, b, caption }: { a: string[]; b: string[]; caption: string[] }) {
+export function MatchupPoster({
+  a,
+  b,
+  caption,
+  variant = 0,
+}: {
+  a: string[];
+  b: string[];
+  caption: string[];
+  variant?: number;
+}) {
+  const t = MATCHUP_TEMPLATES[variant % MATCHUP_TEMPLATES.length];
   return (
     <figure className="w-full">
-      <div className="relative w-full [container-type:inline-size]" style={{ aspectRatio: "1754 / 897" }}>
-        <Image src="/enfrentamiento.png" alt="Próximo enfrentamiento" fill sizes="(max-width: 768px) 100vw, 720px" className="object-contain" />
+      <div className="relative w-full [container-type:inline-size]" style={{ aspectRatio: t.aspect }}>
+        <Image src={t.src} alt="Próximo enfrentamiento" fill sizes="(max-width: 768px) 100vw, 720px" className="object-contain" />
         {[a, b].map((players, side) =>
-          MATCHUP_ROWS.map((top, r) => {
+          t.rows.map((top, r) => {
             const text = players[r] ?? "";
             return (
               <span
@@ -26,7 +43,7 @@ export function MatchupPoster({ a, b, caption }: { a: string[]; b: string[]; cap
                   left: `${MATCHUP_LEFT[side]}%`,
                   width: `${MATCHUP_WIDTH}%`,
                   top: `${top}%`,
-                  fontSize: `${fitFontSize(text, MATCHUP_WIDTH, 2.5, 1.9)}cqw`,
+                  fontSize: `${fitFontSize(text, MATCHUP_WIDTH, 3.6, 2.2)}cqw`,
                 }}
               >
                 {text}
