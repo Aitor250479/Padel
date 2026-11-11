@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import { LEAGUE_COLUMNS, type League } from "@/lib/leagues";
 import { playerStats, winRate, type Record, type StatMatch, type StatPlayer } from "@/lib/player-stats";
+import { leaguePairName } from "@/lib/matches";
 import { displayName, requireProfile, type Pair, type Profile } from "@/lib/session";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -76,7 +77,7 @@ export default async function StatsPage({ params }: { params: Promise<{ id: stri
       supabase.from("profiles").select("id, email, full_name, is_organizer, pair_id").eq("id", id).maybeSingle<Profile>(),
       supabase.from("match_players").select("match_id").eq("profile_id", id).returns<{ match_id: string }[]>(),
       supabase.from("profiles").select("id, email, full_name, is_organizer, pair_id").returns<Profile[]>(),
-      supabase.from("pairs").select("id, name").returns<Pair[]>(),
+      supabase.from("pairs").select("id, name, league_id, player_1, player_2").returns<Pair[]>(),
       supabase.from("leagues").select(LEAGUE_COLUMNS).returns<League[]>(),
     ]);
   if (!player) notFound();
@@ -100,7 +101,14 @@ export default async function StatsPage({ params }: { params: Promise<{ id: stri
     const p = (people ?? []).find((x) => x.id === pid);
     return p ? displayName(p) : "Jugador borrado";
   };
-  const pairName = (pid: string) => (pairs ?? []).find((p) => p.id === pid)?.name ?? "Pareja borrada";
+  const pairName = (pid: string) => {
+    const pair = (pairs ?? []).find((p) => p.id === pid);
+    if (!pair) return "Pareja borrada";
+    return leaguePairName(pair, (x) => {
+      const p = (people ?? []).find((y) => y.id === x);
+      return p ? displayName(p) : null;
+    });
+  };
   const leagueName = (lid: string) => (leagues ?? []).find((l) => l.id === lid)?.name ?? "Sin liga";
   const leagueStart = (lid: string) => (leagues ?? []).find((l) => l.id === lid)?.started_at ?? "";
   const playerLink = (pid: string) => (

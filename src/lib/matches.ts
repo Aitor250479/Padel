@@ -19,6 +19,20 @@ export type Match = {
 export const MATCH_COLUMNS =
   "id, week_start, pair_a, pair_b, slot_day, slot_hour, booking_place, booking_at, status, sets_a, sets_b, score_detail";
 
+/**
+ * Nombre de una pareja. Las de liga individual guardan en BD los nombres de sus
+ * jugadores tal y como estaban al sortear; se rehacen con los nombres actuales
+ * para que un cambio de nombre se vea en todas partes.
+ */
+export function leaguePairName(
+  pair: Pick<Pair, "name" | "league_id" | "player_1" | "player_2">,
+  nameOf: (profileId: string) => string | null,
+) {
+  if (!pair.league_id) return pair.name;
+  const names = [pair.player_1, pair.player_2].filter((x): x is string => !!x).map(nameOf);
+  return names.length && names.every(Boolean) ? names.join(" y ") : pair.name;
+}
+
 /** Nombres de parejas y de sus jugadores, para mostrar partidos. */
 export async function loadPairDirectory(supabase: SupabaseClient) {
   const [{ data: allPairs }, { data: players }] = await Promise.all([
@@ -31,7 +45,14 @@ export async function loadPairDirectory(supabase: SupabaseClient) {
   // Parejas fijas (las de Parejas) y parejas de un partido de liga individual.
   const pairs = (allPairs ?? []).filter((p) => !p.league_id);
   const leaguePairs = (allPairs ?? []).filter((p) => p.league_id);
-  const pairName = (id: string) => allPairs?.find((p) => p.id === id)?.name ?? "Pareja borrada";
+  const pairName = (id: string) => {
+    const pair = allPairs?.find((p) => p.id === id);
+    if (!pair) return "Pareja borrada";
+    return leaguePairName(pair, (pid) => {
+      const p = players?.find((x) => x.id === pid);
+      return p ? displayName(p) : null;
+    });
+  };
   // En la liga individual el nombre de la pareja ya son sus jugadores.
   const playersOf = (id: string) =>
     leaguePairs.some((p) => p.id === id)
