@@ -163,12 +163,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
               items.map((n) => n.id),
             ).map((id) => {
               if (id === FIXED_MATCHUPS)
-                return matchupNews(id, "⚔️ Enfrentamientos de la semana", thisWeek, matchups);
+                return matchupNews(id, "Enfrentamientos de la semana", thisWeek, matchups);
               if (id === FIXED_NEXT_MATCHUPS)
-                return matchupNews(id, "📅 Enfrentamientos de la próxima semana", nextWeek, nextMatchups);
+                return matchupNews(id, "Enfrentamientos de la próxima semana", nextWeek, nextMatchups);
               if (id === FIXED_WEEK_RESULTS)
-                return resultNews(id, "🎾 Resultados de esta semana", thisWeek, weekResults);
-              if (id === FIXED_RESULTS) return resultNews(id, "🏁 Resultados de la semana pasada", lastWeek, lastResults);
+                return resultNews(id, "Resultados de esta semana", thisWeek, weekResults);
+              if (id === FIXED_RESULTS) return resultNews(id, "Resultados de la semana pasada", lastWeek, lastResults);
               const n = items.find((x) => x.id === id);
               return n && <BreakingNews key={id} text={n.body} variant={newsVariant(n.id)} />;
             })}
@@ -200,7 +200,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
   );
 }
 
-const newsTitle = "text-center text-2xl font-black uppercase italic tracking-tight";
+const newsTitle =
+  "text-center text-2xl font-black uppercase italic tracking-tight after:mx-auto after:mt-1.5 after:block after:h-1 after:w-16 after:rounded-full after:bg-lime-400 after:content-['']";
 const newsSub = "mb-2 text-center text-xs font-semibold opacity-60";
 
 type Directory = Awaited<ReturnType<typeof loadPairDirectory>>;
