@@ -131,8 +131,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
               key={m.id}
               variant={i}
               detail={m.score_detail}
-              a={{ name: directory.pairName(m.pair_a), players: directory.playersOf(m.pair_a), sets: m.sets_a! }}
-              b={{ name: directory.pairName(m.pair_b), players: directory.playersOf(m.pair_b), sets: m.sets_b! }}
+              a={{ name: directory.pairName(m.pair_a), players: directory.memberNames(m.pair_a), sets: m.sets_a! }}
+              b={{ name: directory.pairName(m.pair_b), players: directory.memberNames(m.pair_b), sets: m.sets_b! }}
             />
           ))}
         </Carousel>
