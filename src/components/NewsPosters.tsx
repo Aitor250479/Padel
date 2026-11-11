@@ -219,12 +219,8 @@ export function ResultPoster({
   const rows = [a, b];
   const lefts = (t.inset ?? [1.5, 1.5]).map((i) => t.name[0] + i);
   const widths = lefts.map((l) => t.name[1] - l - 1);
-  // Un jugador por línea (si faltan, el nombre de la pareja); trofeo al ganador.
-  const rowLines = rows.map((side, r) => {
-    const lines = side.players.length ? side.players.slice(0, 2) : [side.name];
-    if (side.sets > rows[1 - r].sets) lines[0] = `🏆 ${lines[0]}`;
-    return lines;
-  });
+  // Un jugador por línea (si faltan, el nombre de la pareja).
+  const rowLines = rows.map((side) => (side.players.length ? side.players.slice(0, 2) : [side.name]));
   // Alto de cada fila en cqw (porcentaje del ancho del cartel).
   const rowHeights = t.rows.map(([y0, y1]) => ((y1 - y0) * t.h) / t.w);
   // El mismo tamaño de letra en las dos filas: el que quepa en todas las líneas.
