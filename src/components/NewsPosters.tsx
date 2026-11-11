@@ -87,6 +87,8 @@ type ResultTemplate = {
   name: [number, number];
   rows: [number, number][];
   sets: [number, number][];
+  /** Margen izquierdo de cada fila si algo del dibujo tapa la casilla. */
+  inset?: [number, number];
 };
 const PRESS: Omit<ResultTemplate, "src" | "w" | "h" | "rows"> = {
   name: [13.8, 45.8],
@@ -120,6 +122,8 @@ const RESULT_TEMPLATES: ResultTemplate[] = [
     w: 861,
     h: 433,
     name: [35.4, 60.6],
+    // El guante de la mascota tapa el principio de la segunda fila.
+    inset: [1.5, 6.5],
     rows: [
       [30.9, 44.3],
       [45.3, 58.9],
@@ -192,9 +196,13 @@ const RESULT_TEMPLATES: ResultTemplate[] = [
   },
 ];
 
-type ResultSide = { name: string; players: string; sets: number };
+type ResultSide = { name: string; players: string[]; sets: number };
 
-/** Cartel "Resultado del partido" con los juegos de cada set. */
+/**
+ * Cartel "Resultado del partido" con los juegos de cada set. En la casilla de
+ * cada pareja van sus dos jugadores, uno por línea; el nombre de la pareja y el
+ * resultado en sets van debajo del cartel.
+ */
 export function ResultPoster({
   a,
   b,
@@ -209,81 +217,83 @@ export function ResultPoster({
   const t = RESULT_TEMPLATES[variant % RESULT_TEMPLATES.length];
   const games = parseSets(detail);
   const rows = [a, b];
-  const left = t.name[0] + 1.5;
-  const width = t.name[1] - left - 1;
+  const lefts = (t.inset ?? [1.5, 1.5]).map((i) => t.name[0] + i);
+  const widths = lefts.map((l) => t.name[1] - l - 1);
+  // Un jugador por línea (si faltan, el nombre de la pareja); trofeo al ganador.
+  const rowLines = rows.map((side, r) => {
+    const lines = side.players.length ? side.players.slice(0, 2) : [side.name];
+    if (side.sets > rows[1 - r].sets) lines[0] = `🏆 ${lines[0]}`;
+    return lines;
+  });
+  // Alto de cada fila en cqw (porcentaje del ancho del cartel).
+  const rowHeights = t.rows.map(([y0, y1]) => ((y1 - y0) * t.h) / t.w);
+  // El mismo tamaño de letra en las dos filas: el que quepa en todas las líneas.
+  const size = Math.min(
+    ...rowLines.flatMap((lines, r) =>
+      lines.map((l) => fitFontSize(l, widths[r], Math.min(3, (rowHeights[r] * 0.8) / lines.length), 1.6)),
+    ),
+  );
   return (
-    <div
-      className={`relative w-full [container-type:inline-size] ${posterCorners}`}
-      style={{ aspectRatio: `${t.w} / ${t.h}` }}
-    >
-      <Image
-        src={t.src}
-        alt="Resultado del partido"
-        fill
-        sizes="(max-width: 768px) 100vw, 720px"
-        className="object-contain"
-      />
-      {rows.map((side, r) => {
-        const other = rows[1 - r];
-        const won = side.sets > other.sets;
-        const title = `${won ? "🏆 " : ""}${side.name}`;
-        // Sin juegos apuntados: el resultado en sets debajo del nombre.
-        const score = games.length
-          ? ""
-          : side.sets === other.sets
-            ? `empate ${side.sets}-${other.sets}`
-            : `${won ? "ganan" : "pierden"} ${side.sets}-${other.sets}`;
-        const sub = [score, side.players].filter(Boolean).join(" · ");
-        const [y0, y1] = t.rows[r];
-        // Alto de la fila en cqw (porcentaje del ancho del cartel).
-        const rowCqw = ((y1 - y0) * t.h) / t.w;
-        return (
-          <div key={r}>
-            <span
-              className={`${name} ${won ? "text-red-600" : "text-black"}`}
-              style={{
-                left: `${left}%`,
-                width: `${width}%`,
-                top: `${y0 + (y1 - y0) * 0.33}%`,
-                fontSize: `${fitFontSize(title, width, Math.min(3.3, rowCqw * 0.42))}cqw`,
-              }}
-            >
-              {title}
-            </span>
-            {sub && (
+    <figure className="w-full">
+      <div
+        className={`relative w-full [container-type:inline-size] ${posterCorners}`}
+        style={{ aspectRatio: `${t.w} / ${t.h}` }}
+      >
+        <Image
+          src={t.src}
+          alt="Resultado del partido"
+          fill
+          sizes="(max-width: 768px) 100vw, 720px"
+          className="object-contain"
+        />
+        {rows.map((side, r) => {
+          const other = rows[1 - r];
+          const won = side.sets > other.sets;
+          const lines = rowLines[r];
+          const [y0, y1] = t.rows[r];
+          const rowCqw = rowHeights[r];
+          return (
+            <div key={r}>
               <span
-                className="absolute -translate-y-1/2 overflow-hidden text-ellipsis whitespace-nowrap font-semibold leading-tight text-black/75"
+                className={`absolute -translate-y-1/2 font-black uppercase italic leading-[1.25] ${won ? "text-red-600" : "text-black"}`}
                 style={{
-                  left: `${left}%`,
-                  width: `${width}%`,
-                  top: `${y0 + (y1 - y0) * 0.75}%`,
-                  fontSize: `${Math.max(1.6, Math.min(2.3, width / ([...sub].length * 0.58)))}cqw`,
+                  left: `${lefts[r]}%`,
+                  width: `${widths[r]}%`,
+                  top: `${(y0 + y1) / 2}%`,
+                  fontSize: `${size}cqw`,
                 }}
               >
-                {sub}
+                {lines.map((l, i) => (
+                  <span key={i} className="block overflow-hidden text-ellipsis whitespace-nowrap">
+                    {l}
+                  </span>
+                ))}
               </span>
-            )}
-            {t.sets.map(([x0, x1], s) => {
-              const g = games[s];
-              if (!g) return null;
-              return (
-                <span
-                  key={s}
-                  className={`absolute -translate-x-1/2 -translate-y-1/2 font-black tabular-nums ${g[r] > g[1 - r] ? "text-red-600" : "text-black"}`}
-                  style={{
-                    left: `${(x0 + x1) / 2}%`,
-                    top: `${(y0 + y1) / 2}%`,
-                    fontSize: `${Math.min(rowCqw * 0.7, (x1 - x0) * 0.6)}cqw`,
-                  }}
-                >
-                  {g[r]}
-                </span>
-              );
-            })}
-          </div>
-        );
-      })}
-    </div>
+              {t.sets.map(([x0, x1], s) => {
+                const g = games[s];
+                if (!g) return null;
+                return (
+                  <span
+                    key={s}
+                    className={`absolute -translate-x-1/2 -translate-y-1/2 font-black tabular-nums ${g[r] > g[1 - r] ? "text-red-600" : "text-black"}`}
+                    style={{
+                      left: `${(x0 + x1) / 2}%`,
+                      top: `${(y0 + y1) / 2}%`,
+                      fontSize: `${Math.min(rowCqw * 0.7, (x1 - x0) * 0.6)}cqw`,
+                    }}
+                  >
+                    {g[r]}
+                  </span>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+      <figcaption className="mt-1 text-center text-sm">
+        {a.name} <strong>{a.sets}-{b.sets}</strong> {b.name}
+      </figcaption>
+    </figure>
   );
 }
 
