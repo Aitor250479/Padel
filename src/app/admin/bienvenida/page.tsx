@@ -6,7 +6,7 @@ import { requireOrganizer } from "@/lib/session";
 import ShareImageButton from "@/components/ShareImageButton";
 import { siteUrl } from "@/lib/site-url";
 import { POLL_COLUMNS, addHoursLocal, pollOnHome, pollOpen, type Poll } from "@/lib/polls";
-import { NEWS_MATCHUPS_KEY, NEWS_RESULTS_KEY, newsEnabled } from "@/lib/news";
+import { FIXED_NEWS_KEYS, newsEnabled } from "@/lib/news";
 import { HOME_MODE_KEY, WELCOME_KEY, type HomeMode } from "@/lib/welcome";
 import { nowInSpain } from "@/lib/weeks";
 import { saveHomeMode } from "./actions";
@@ -21,7 +21,7 @@ export default async function BienvenidaPage({
   const { data } = await supabase
     .from("site_texts")
     .select("key, body")
-    .in("key", [WELCOME_KEY, HOME_MODE_KEY, NEWS_MATCHUPS_KEY, NEWS_RESULTS_KEY])
+    .in("key", [WELCOME_KEY, HOME_MODE_KEY, ...FIXED_NEWS_KEYS])
     .returns<{ key: string; body: string }[]>();
   const get = (key: string) => data?.find((r) => r.key === key)?.body;
   const text = data?.find((r) => r.key === WELCOME_KEY)?.body ?? "";
@@ -39,7 +39,7 @@ export default async function BienvenidaPage({
     supabase.from("news_items").select("id", { count: "exact", head: true }),
   ]);
   const onHome = (polls ?? []).filter((p) => pollOnHome(p, now));
-  const fixedOn = [NEWS_MATCHUPS_KEY, NEWS_RESULTS_KEY].filter((k) => newsEnabled(get(k))).length;
+  const fixedOn = FIXED_NEWS_KEYS.filter((k) => newsEnabled(get(k))).length;
   const invite = `${await siteUrl()}/unete`;
 
   const option =
@@ -122,8 +122,8 @@ export default async function BienvenidaPage({
         <section className="mt-8 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
           <h2 className="mb-1 font-semibold">📰 Noticias</h2>
           <p className="mb-3 text-sm opacity-70">
-            Enfrentamientos de la semana, resultados de la última jornada y noticias escritas por los
-            organizadores. Se muestran {fixedOn + (customOn ?? 0)} de {2 + (customAll ?? 0)}
+            Enfrentamientos de esta semana y de la próxima, resultados de esta semana y de la pasada, y noticias escritas por los
+            organizadores. Se muestran {fixedOn + (customOn ?? 0)} de {FIXED_NEWS_KEYS.length + (customAll ?? 0)}
             {mode !== "noticias" && ", pero ahora el inicio muestra el texto de bienvenida"}.
           </p>
           <Link

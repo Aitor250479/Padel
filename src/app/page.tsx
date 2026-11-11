@@ -20,10 +20,16 @@ import { HOME_MODE_KEY, WELCOME_KEY } from "@/lib/welcome";
 import { POLL_COLUMNS, addHoursLocal, pollOnHome, pollTodo, type Poll } from "@/lib/polls";
 import {
   FIXED_MATCHUPS,
+  FIXED_NEXT_MATCHUPS,
+  FIXED_NEWS_KEYS,
   FIXED_RESULTS,
+  FIXED_WEEK_RESULTS,
   NEWS_MATCHUPS_KEY,
+  NEWS_NEXT_MATCHUPS_KEY,
   NEWS_ORDER_KEY,
   NEWS_RESULTS_KEY,
+  NEWS_WEEK_RESULTS_KEY,
+  matchPending,
   newsEnabled,
   newsOrder,
   newsVariant,
@@ -40,7 +46,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
   const { data: texts } = await supabase
     .from("site_texts")
     .select("key, body")
-    .in("key", [WELCOME_KEY, HOME_MODE_KEY, NEWS_MATCHUPS_KEY, NEWS_RESULTS_KEY, NEWS_ORDER_KEY])
+    .in("key", [WELCOME_KEY, HOME_MODE_KEY, ...FIXED_NEWS_KEYS, NEWS_ORDER_KEY])
     .returns<{ key: string; body: string }[]>();
   const get = (key: string) => texts?.find((t) => t.key === key)?.body;
   const showNews = get(HOME_MODE_KEY) === "noticias";
@@ -48,6 +54,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
   const now = nowInSpain();
   const thisWeek = currentWeek();
   const lastWeek = addDays(thisWeek, -7);
+  const nextWeek = addDays(thisWeek, 7);
+  const on = (key: string) => showNews && newsEnabled(get(key));
 
   const [league, directory] = await Promise.all([currentLeague(supabase), loadPairDirectory(supabase)]);
   const weekMatches = (week: string) =>
@@ -58,15 +66,16 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
       .returns<Match[]>()
       .then(({ data }) => data ?? []);
   // Lo pendiente del jugador, las encuestas y las noticias se cargan a la vez.
-  const [todos, polls, matchups, lastResults, items] = await Promise.all([
+  const withResult = (ms: Match[]) => ms.filter((m) => m.sets_a !== null && m.sets_b !== null);
+  const none = Promise.resolve([] as Match[]);
+  const [todos, polls, thisWeekMatches, nextMatches, lastMatches, items] = await Promise.all([
     profile.active !== false && (directory.pairsOf(profile).length || isIndividual(league))
       ? loadTodos(supabase, profile, directory.pairsOf(profile), league, directory)
       : Promise.resolve([]),
     loadPollTodos(supabase, profile, now),
-    showNews && newsEnabled(get(NEWS_MATCHUPS_KEY)) ? weekMatches(thisWeek) : Promise.resolve([] as Match[]),
-    showNews && newsEnabled(get(NEWS_RESULTS_KEY))
-      ? weekMatches(lastWeek).then((ms) => ms.filter((m) => m.sets_a !== null && m.sets_b !== null))
-      : Promise.resolve([] as Match[]),
+    on(NEWS_MATCHUPS_KEY) || on(NEWS_WEEK_RESULTS_KEY) ? weekMatches(thisWeek) : none,
+    on(NEWS_NEXT_MATCHUPS_KEY) ? weekMatches(nextWeek) : none,
+    on(NEWS_RESULTS_KEY) ? weekMatches(lastWeek) : none,
     showNews
       ? supabase
           .from("news_items")
@@ -78,11 +87,57 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
       : Promise.resolve([] as NewsItem[]),
   ]);
   const cards = [...todos, ...polls];
-  const hasNews = matchups.length + lastResults.length + items.length > 0;
+  // Enfrentamientos: solo los que faltan por jugar. Resultados: solo los confirmados.
+  const matchups = on(NEWS_MATCHUPS_KEY) ? thisWeekMatches.filter((m) => matchPending(m, now)) : [];
+  const nextMatchups = nextMatches.filter((m) => m.sets_a === null);
+  const weekResults = on(NEWS_WEEK_RESULTS_KEY) ? withResult(thisWeekMatches) : [];
+  const lastResults = withResult(lastMatches);
+  const hasNews = matchups.length + nextMatchups.length + weekResults.length + lastResults.length + items.length > 0;
   const place = (m: Match) =>
     m.booking_place || m.booking_at
       ? `📍 ${[m.booking_place, formatBooking(m.booking_at)].filter(Boolean).join(" · ")}`
       : "📍 Pendiente de reservar";
+  const matchupNews = (id: string, title: string, week: string, list: Match[]) =>
+    list.length > 0 && (
+      <section key={id}>
+        <h1 className={newsTitle}>{title}</h1>
+        <p className={newsSub}>Semana del {formatWeekLong(week)}</p>
+        <Carousel label={title}>
+          {list.map((m, i) => (
+            <MatchupPoster
+              key={m.id}
+              variant={i}
+              a={directory.memberNames(m.pair_a)}
+              b={directory.memberNames(m.pair_b)}
+              caption={[
+                ...(directory.isLeaguePair(m.pair_a)
+                  ? []
+                  : [`${directory.pairName(m.pair_a)} vs ${directory.pairName(m.pair_b)}`]),
+                place(m),
+              ]}
+            />
+          ))}
+        </Carousel>
+      </section>
+    );
+  const resultNews = (id: string, title: string, week: string, list: Match[]) =>
+    list.length > 0 && (
+      <section key={id}>
+        <h1 className={newsTitle}>{title}</h1>
+        <p className={newsSub}>Semana del {formatWeekLong(week)}</p>
+        <Carousel label={title}>
+          {list.map((m, i) => (
+            <ResultPoster
+              key={m.id}
+              variant={i}
+              detail={m.score_detail}
+              a={{ name: directory.pairName(m.pair_a), players: directory.playersOf(m.pair_a), sets: m.sets_a! }}
+              b={{ name: directory.pairName(m.pair_b), players: directory.playersOf(m.pair_b), sets: m.sets_b! }}
+            />
+          ))}
+        </Carousel>
+      </section>
+    );
 
   return (
     <>
@@ -107,61 +162,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
               get(NEWS_ORDER_KEY),
               items.map((n) => n.id),
             ).map((id) => {
-              if (id === FIXED_MATCHUPS) {
-                return (
-                  matchups.length > 0 && (
-                    <section key={id}>
-                      <h1 className={newsTitle}>⚔️ Enfrentamientos de la semana</h1>
-                      <p className={newsSub}>Semana del {formatWeekLong(thisWeek)}</p>
-                      <Carousel label="Enfrentamientos de la semana">
-                        {matchups.map((m, i) => (
-                          <MatchupPoster
-                            key={m.id}
-                            variant={i}
-                            a={directory.memberNames(m.pair_a)}
-                            b={directory.memberNames(m.pair_b)}
-                            caption={[
-                              ...(directory.isLeaguePair(m.pair_a)
-                                ? []
-                                : [`${directory.pairName(m.pair_a)} vs ${directory.pairName(m.pair_b)}`]),
-                              place(m),
-                            ]}
-                          />
-                        ))}
-                      </Carousel>
-                    </section>
-                  )
-                );
-              }
-              if (id === FIXED_RESULTS) {
-                return (
-                  lastResults.length > 0 && (
-                    <section key={id}>
-                      <h1 className={newsTitle}>🏁 Resultados de la última jornada</h1>
-                      <p className={newsSub}>Semana del {formatWeekLong(lastWeek)}</p>
-                      <Carousel label="Resultados de la última jornada">
-                        {lastResults.map((m, i) => (
-                          <ResultPoster
-                            key={m.id}
-                            variant={i}
-                            detail={m.score_detail}
-                            a={{
-                              name: directory.pairName(m.pair_a),
-                              players: directory.playersOf(m.pair_a),
-                              sets: m.sets_a!,
-                            }}
-                            b={{
-                              name: directory.pairName(m.pair_b),
-                              players: directory.playersOf(m.pair_b),
-                              sets: m.sets_b!,
-                            }}
-                          />
-                        ))}
-                      </Carousel>
-                    </section>
-                  )
-                );
-              }
+              if (id === FIXED_MATCHUPS)
+                return matchupNews(id, "⚔️ Enfrentamientos de la semana", thisWeek, matchups);
+              if (id === FIXED_NEXT_MATCHUPS)
+                return matchupNews(id, "📅 Enfrentamientos de la próxima semana", nextWeek, nextMatchups);
+              if (id === FIXED_WEEK_RESULTS)
+                return resultNews(id, "🎾 Resultados de esta semana", thisWeek, weekResults);
+              if (id === FIXED_RESULTS) return resultNews(id, "🏁 Resultados de la semana pasada", lastWeek, lastResults);
               const n = items.find((x) => x.id === id);
               return n && <BreakingNews key={id} text={n.body} variant={newsVariant(n.id)} />;
             })}
