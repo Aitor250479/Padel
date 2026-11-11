@@ -2,6 +2,9 @@ import Image from "next/image";
 import { parseSets } from "@/components/Scoreboard";
 import { breakingFontSize, breakingSize, fitFontSize } from "@/lib/news";
 
+// Esquinas redondeadas, iguales en los carteles de enfrentamiento y de resultado.
+const posterCorners = "overflow-hidden rounded-xl";
+
 const name =
   "absolute -translate-y-1/2 overflow-hidden text-ellipsis whitespace-nowrap font-black uppercase italic leading-tight";
 
@@ -34,7 +37,7 @@ export function MatchupPoster({
   return (
     <figure className="w-full">
       <div
-        className="relative w-full [container-type:inline-size]"
+        className={`relative w-full [container-type:inline-size] ${posterCorners}`}
         style={{ aspectRatio: "1672 / 941" }}
       >
         <Image
@@ -210,7 +213,7 @@ export function ResultPoster({
   const width = t.name[1] - left - 1;
   return (
     <div
-      className="relative w-full [container-type:inline-size]"
+      className={`relative w-full [container-type:inline-size] ${posterCorners}`}
       style={{ aspectRatio: `${t.w} / ${t.h}` }}
     >
       <Image
