@@ -202,7 +202,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
 
 const newsTitle =
   "text-center text-2xl font-black uppercase italic tracking-tight after:mx-auto after:mt-1.5 after:block after:h-1 after:w-16 after:rounded-full after:bg-lime-400 after:content-['']";
-const newsSub = "mb-2 text-center text-xs font-semibold opacity-60";
+const newsSub = "mb-2 mt-3 text-center text-xs font-semibold opacity-60";
 
 type Directory = Awaited<ReturnType<typeof loadPairDirectory>>;
 
