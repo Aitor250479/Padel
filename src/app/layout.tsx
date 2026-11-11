@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Footer from "@/components/Footer";
 import "./globals.css";
 
@@ -6,6 +6,11 @@ export const metadata: Metadata = {
   title: "Torneo Pádel Loyola",
   description: "Disponibilidad, partidos y clasificación del torneo",
   icons: { icon: "/logo.png", apple: "/logo.png" },
+};
+
+// Barra del navegador del móvil en negro, como la cabecera.
+export const viewport: Viewport = {
+  themeColor: "#0a0a0a",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

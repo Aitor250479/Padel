@@ -20,7 +20,8 @@ export default function Header({ profile }: { profile: Profile }) {
 
   return (
     <header className="bg-neutral-950 text-white shadow-lg">
-      <div className="mx-auto max-w-3xl px-4 pt-3">
+      {/* Franja negra arriba (y la zona segura del móvil) para que la barra del navegador no emborrone el logo */}
+      <div className="mx-auto max-w-3xl px-4 pt-[calc(env(safe-area-inset-top)+1.5rem)]">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex min-w-0 items-center gap-3">
             <Image
@@ -46,7 +47,7 @@ export default function Header({ profile }: { profile: Profile }) {
         </div>
         <NavPills items={items} />
       </div>
-      <div className="h-1 bg-gradient-to-r from-red-600 via-red-500 to-lime-400" />
+      <div className="h-1 bg-lime-400" />
     </header>
   );
 }
