@@ -9,17 +9,23 @@ import { requireOrganizer } from "@/lib/session";
 import { currentLeague, onlyLeague } from "@/lib/leagues";
 import {
   FIXED_MATCHUPS,
+  FIXED_NEWS_KEYS,
+  FIXED_NEXT_MATCHUPS,
   FIXED_RESULTS,
+  FIXED_WEEK_RESULTS,
   NEWS_MATCHUPS_KEY,
+  NEWS_NEXT_MATCHUPS_KEY,
   NEWS_ORDER_KEY,
   NEWS_RESULTS_KEY,
+  NEWS_WEEK_RESULTS_KEY,
+  matchPending,
   newsEnabled,
   newsOrder,
   newsVariant,
   type NewsItem,
 } from "@/lib/news";
 import { HOME_MODE_KEY } from "@/lib/welcome";
-import { addDays, currentWeek, formatWeekLong } from "@/lib/weeks";
+import { addDays, currentWeek, formatWeekLong, nowInSpain } from "@/lib/weeks";
 import { createNews, deleteNews, moveNews, toggleFixedNews, toggleNews, updateNews } from "./actions";
 
 const field = "w-full rounded-lg border border-gray-300 px-3 py-2 text-black";
@@ -51,28 +57,36 @@ export default async function NoticiasPage({
   const { error, ok } = await searchParams;
   const thisWeek = currentWeek();
   const lastWeek = addDays(thisWeek, -7);
+  const nextWeek = addDays(thisWeek, 7);
+  const now = nowInSpain();
   const league = await currentLeague(supabase);
-  const count = (week: string, withResult: boolean) => {
-    let q = onlyLeague(supabase.from("matches").select("id", { count: "exact", head: true }), league)
-      .eq("week_start", week)
-      .neq("status", "cancelado");
-    if (withResult) q = q.not("sets_a", "is", null);
-    return q.then(({ count }) => count ?? 0);
-  };
-  const [{ data: texts }, { data: items }, matchups, results] = await Promise.all([
+  type Row = { sets_a: number | null; booking_at: string | null };
+  const week = (w: string) =>
+    onlyLeague(supabase.from("matches").select("sets_a, booking_at"), league)
+      .eq("week_start", w)
+      .neq("status", "cancelado")
+      .returns<Row[]>()
+      .then(({ data }) => data ?? []);
+  const [{ data: texts }, { data: items }, current, next, last] = await Promise.all([
     supabase
       .from("site_texts")
       .select("key, body")
-      .in("key", [HOME_MODE_KEY, NEWS_MATCHUPS_KEY, NEWS_RESULTS_KEY, NEWS_ORDER_KEY])
+      .in("key", [HOME_MODE_KEY, ...FIXED_NEWS_KEYS, NEWS_ORDER_KEY])
       .returns<{ key: string; body: string }[]>(),
     supabase
       .from("news_items")
       .select("id, body, visible, created_at")
       .order("created_at", { ascending: false })
       .returns<NewsItem[]>(),
-    count(thisWeek, false),
-    count(lastWeek, true),
+    week(thisWeek),
+    week(nextWeek),
+    week(lastWeek),
   ]);
+  const played = (rows: Row[]) => rows.filter((m) => m.sets_a !== null).length;
+  const matchups = current.filter((m) => matchPending(m, now)).length;
+  const nextMatchups = next.filter((m) => m.sets_a === null).length;
+  const partidos = (n: number) => `${n} ${n === 1 ? "partido" : "partidos"}`;
+  const resultados = (n: number) => `${n} ${n === 1 ? "resultado confirmado" : "resultados confirmados"}`;
   const get = (key: string) => texts?.find((t) => t.key === key)?.body;
   const showsNews = get(HOME_MODE_KEY) === "noticias";
 
@@ -86,14 +100,28 @@ export default async function NoticiasPage({
       key: NEWS_MATCHUPS_KEY,
       icon: "⚔️",
       title: "Enfrentamientos de la semana",
-      text: `${matchups} ${matchups === 1 ? "partido" : "partidos"} en la semana del ${formatWeekLong(thisWeek)}`,
+      text: `${partidos(matchups)} por jugar en la semana del ${formatWeekLong(thisWeek)}. Cada partido deja de salir cuando pasa su fecha y hora.`,
+    },
+    {
+      id: FIXED_NEXT_MATCHUPS,
+      key: NEWS_NEXT_MATCHUPS_KEY,
+      icon: "📅",
+      title: "Enfrentamientos de la próxima semana",
+      text: `${partidos(nextMatchups)} en la semana del ${formatWeekLong(nextWeek)}`,
+    },
+    {
+      id: FIXED_WEEK_RESULTS,
+      key: NEWS_WEEK_RESULTS_KEY,
+      icon: "🎾",
+      title: "Resultados de esta semana",
+      text: `${resultados(played(current))} de la semana del ${formatWeekLong(thisWeek)}`,
     },
     {
       id: FIXED_RESULTS,
       key: NEWS_RESULTS_KEY,
       icon: "🏁",
-      title: "Resultados de la última jornada",
-      text: `${results} ${results === 1 ? "resultado confirmado" : "resultados confirmados"} de la semana del ${formatWeekLong(lastWeek)}`,
+      title: "Resultados de la semana pasada",
+      text: `${resultados(played(last))} de la semana del ${formatWeekLong(lastWeek)}`,
     },
   ];
 

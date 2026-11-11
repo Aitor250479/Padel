@@ -51,18 +51,52 @@ export function fitFontSize(text: string, width: number, max: number, min = 2.2)
 
 /** Orden de las noticias en el inicio (ids separados por comas, en site_texts). */
 export const NEWS_ORDER_KEY = "noticias_orden";
-/** Ids de las dos noticias fijas dentro del orden. */
+/** Ids de las noticias fijas dentro del orden. */
 export const FIXED_MATCHUPS = "enfrentamientos";
+export const FIXED_NEXT_MATCHUPS = "enfrentamientos_proxima";
+export const FIXED_WEEK_RESULTS = "resultados_semana";
 export const FIXED_RESULTS = "resultados";
+/** Interruptores de las dos noticias fijas añadidas después (en site_texts, "0" = no se muestra). */
+export const NEWS_NEXT_MATCHUPS_KEY = "noticias_enfrentamientos_proxima";
+export const NEWS_WEEK_RESULTS_KEY = "noticias_resultados_semana";
+
+/** Noticias fijas, en su orden por defecto, con la clave de su interruptor. */
+export const FIXED_NEWS = [
+  { id: FIXED_MATCHUPS, key: NEWS_MATCHUPS_KEY },
+  { id: FIXED_NEXT_MATCHUPS, key: NEWS_NEXT_MATCHUPS_KEY },
+  { id: FIXED_WEEK_RESULTS, key: NEWS_WEEK_RESULTS_KEY },
+  { id: FIXED_RESULTS, key: NEWS_RESULTS_KEY },
+];
+export const FIXED_NEWS_KEYS = FIXED_NEWS.map((f) => f.key);
 
 /**
- * Orden completo: el guardado, sin ids que ya no existen, y al final lo que
- * falte (por defecto las dos fijas y luego las propias, de la más nueva a la más antigua).
+ * Orden completo: el guardado, sin ids que ya no existen, y lo que falte. Las
+ * fijas nuevas que no estaban en un orden guardado van junto a su pareja (la
+ * próxima semana detrás de los enfrentamientos, los resultados de esta semana
+ * delante de los de la pasada); el resto, al final (por defecto las fijas y luego
+ * las propias, de la más nueva a la más antigua).
  */
 export function newsOrder(saved: string | undefined, customIds: string[]) {
-  const all = [FIXED_MATCHUPS, FIXED_RESULTS, ...customIds];
-  const kept = [...new Set((saved ?? "").split(",").filter((id) => all.includes(id)))];
-  return [...kept, ...all.filter((id) => !kept.includes(id))];
+  const all = [...FIXED_NEWS.map((f) => f.id), ...customIds];
+  const order = [...new Set((saved ?? "").split(",").filter((id) => all.includes(id)))];
+  const place = (id: string, anchor: string, after: boolean) => {
+    const i = order.indexOf(anchor);
+    if (order.includes(id) || i < 0) return;
+    order.splice(after ? i + 1 : i, 0, id);
+  };
+  place(FIXED_NEXT_MATCHUPS, FIXED_MATCHUPS, true);
+  place(FIXED_WEEK_RESULTS, FIXED_RESULTS, false);
+  return [...order, ...all.filter((id) => !order.includes(id))];
+}
+
+/**
+ * ¿Sigue pendiente el partido? Sin resultado y sin que haya pasado su fecha y
+ * hora (los que no tienen reserva siguen pendientes toda la semana).
+ * `now` y `booking_at` en hora de España, "YYYY-MM-DDTHH:MM...".
+ */
+export function matchPending(m: { sets_a: number | null; booking_at: string | null }, now: string) {
+  if (m.sets_a !== null) return false;
+  return !m.booking_at || now < m.booking_at.slice(0, 16);
 }
 
 /** Sube (-1) o baja (+1) una noticia un puesto. */

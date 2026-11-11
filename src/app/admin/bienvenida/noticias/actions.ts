@@ -4,7 +4,7 @@ import { friendlyError } from "@/lib/errors";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireOrganizer } from "@/lib/session";
-import { NEWS_MATCHUPS_KEY, NEWS_MAX, NEWS_ORDER_KEY, NEWS_RESULTS_KEY, moveInOrder, newsOrder } from "@/lib/news";
+import { FIXED_NEWS_KEYS, NEWS_MAX, NEWS_ORDER_KEY, moveInOrder, newsOrder } from "@/lib/news";
 
 const PATH = "/admin/bienvenida/noticias";
 
@@ -18,11 +18,11 @@ function cleanBody(formData: FormData) {
   return String(formData.get("body") ?? "").trim();
 }
 
-/** Enciende o apaga una de las dos noticias fijas. */
+/** Enciende o apaga una de las noticias fijas. */
 export async function toggleFixedNews(formData: FormData) {
   const { supabase, profile } = await requireOrganizer();
   const key = String(formData.get("key") ?? "");
-  if (key !== NEWS_MATCHUPS_KEY && key !== NEWS_RESULTS_KEY) return done({ error: "Noticia desconocida" });
+  if (!FIXED_NEWS_KEYS.includes(key)) return done({ error: "Noticia desconocida" });
   const on = formData.get("on") === "1";
   const { error } = await supabase
     .from("site_texts")
