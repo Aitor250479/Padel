@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
@@ -47,7 +48,18 @@ export default async function NivelPage({
         >
           ← {isMe ? "Mis estadísticas" : displayName(player)}
         </Link>
-        <h1 className="mt-2 text-2xl font-bold">🎯 {isMe ? "Mi nivel" : `Nivel de ${displayName(player)}`}</h1>
+        <h1 className="mt-3 mb-4">
+          <Image
+            src="/tituloformulario.png"
+            alt={isMe ? "Formulario de nivel" : `Formulario de nivel de ${displayName(player)}`}
+            width={1200}
+            height={288}
+            className="h-auto w-full"
+            sizes="(max-width: 640px) 100vw, 576px"
+            priority
+          />
+        </h1>
+        {!isMe && <p className="mb-4 text-center text-lg font-bold">{displayName(player)}</p>}
         <Notice ok={params.ok} error={params.error} />
 
         {form && (
