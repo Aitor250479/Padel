@@ -8,6 +8,7 @@ export default function Header({ profile }: { profile: Profile }) {
     // Un jugador desactivado solo consulta: sin disponibilidad.
     ...(profile.active === false ? [] : [{ href: "/disponibilidad", label: "Disponibilidad", icon: "📅" }]),
     { href: "/partidos", label: "Partidos", icon: "🎾" },
+    { href: "/amistosos", label: "Amistosos", icon: "🤝" },
     { href: "/clasificacion", label: "Clasificación", icon: "🏆" },
     { href: "/perfil", label: "Mi perfil", icon: "👤" },
     ...(profile.is_organizer

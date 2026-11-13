@@ -36,6 +36,18 @@ import {
   type NewsItem,
 } from "@/lib/news";
 import Notice from "@/components/Notice";
+import FriendlyPoster from "@/components/FriendlyPoster";
+import {
+  RECENT_DAYS,
+  daysBefore,
+  friendlyTodos,
+  hasResult,
+  homeFriendlies,
+  lineup,
+  type FriendlyMatch,
+  type FriendlyPlayer,
+} from "@/lib/friendlies";
+import { loadFriendlies, loadPeople } from "@/lib/friendlies-data";
 import { addDays, currentWeek, defaultWeek, formatWeekLong, nowInSpain } from "@/lib/weeks";
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
@@ -68,7 +80,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
   // Lo pendiente del jugador, las encuestas y las noticias se cargan a la vez.
   const withResult = (ms: Match[]) => ms.filter((m) => m.sets_a !== null && m.sets_b !== null);
   const none = Promise.resolve([] as Match[]);
-  const [todos, polls, thisWeekMatches, nextMatches, lastMatches, items] = await Promise.all([
+  const [todos, polls, thisWeekMatches, nextMatches, lastMatches, items, friendlies, people] = await Promise.all([
     profile.active !== false && (directory.pairsOf(profile).length || isIndividual(league))
       ? loadTodos(supabase, profile, directory.pairsOf(profile), league, directory)
       : Promise.resolve([]),
@@ -85,8 +97,15 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
           .returns<NewsItem[]>()
           .then(({ data }) => data ?? [])
       : Promise.resolve([] as NewsItem[]),
+    loadFriendlies(supabase, { since: daysBefore(now, RECENT_DAYS) }),
+    loadPeople(supabase),
   ]);
-  const cards = [...todos, ...polls];
+  const cards = [
+    ...todos,
+    ...friendlyTodos(profile.id, friendlies.matches, friendlies.players, now, formatBooking),
+    ...polls,
+  ];
+  const friendly = homeFriendlies(friendlies.matches, friendlies.players, now);
   // Enfrentamientos: solo los que faltan por jugar. Resultados: solo los confirmados.
   const matchups = on(NEWS_MATCHUPS_KEY) ? thisWeekMatches.filter((m) => matchPending(m, now)) : [];
   const nextMatchups = nextMatches.filter((m) => m.sets_a === null);
@@ -179,6 +198,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
           </section>
         )}
 
+        <FriendliesOnHome {...friendly} players={friendlies.players} nameOf={people.nameOf} />
+
         {!inactive && ((!profile.pair_id && !isIndividual(league)) || !profile.full_name) && (
           <div className="mt-4 flex flex-col gap-1 text-sm opacity-80">
             {!profile.pair_id && !isIndividual(league) && (
@@ -203,6 +224,53 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
 const newsTitle =
   "text-center text-2xl font-black uppercase italic tracking-tight after:mx-auto after:mt-1.5 after:block after:h-1 after:w-16 after:rounded-full after:bg-lime-400 after:content-['']";
 const newsSub = "mb-2 mt-3 text-center text-xs font-semibold opacity-60";
+
+/** Los tres carruseles de amistosos: con huecos, confirmados y jugados. */
+function FriendliesOnHome({
+  open,
+  confirmed,
+  played,
+  players,
+  nameOf,
+}: ReturnType<typeof homeFriendlies> & { players: FriendlyPlayer[]; nameOf: (id: string | null) => string }) {
+  const names = (ids: (string | null)[]) => ids.map((id) => (id ? nameOf(id) : null));
+  const poster = (m: FriendlyMatch, kind: "open" | "confirmed" | "result" | "noresult") => {
+    const l = lineup(m, players);
+    return (
+      <FriendlyPoster
+        key={m.id}
+        href={`/amistosos/${m.id}`}
+        kind={kind}
+        a={names(l.a)}
+        b={names(l.b)}
+        when={formatBooking(m.play_at) ?? ""}
+        place={m.place}
+        score={hasResult(m) ? { a: m.sets_a!, b: m.sets_b!, detail: m.score_detail } : undefined}
+      />
+    );
+  };
+  const block = (title: string, sub: string, list: FriendlyMatch[], kind: (m: FriendlyMatch) => Parameters<typeof poster>[1]) =>
+    list.length > 0 && (
+      <section>
+        <h1 className={newsTitle}>{title}</h1>
+        <p className={newsSub}>{sub}</p>
+        <Carousel label={title}>{list.map((m) => poster(m, kind(m)))}</Carousel>
+      </section>
+    );
+  return (
+    <div className="mt-8 flex flex-col gap-8">
+      {block("Amistosos con huecos libres", "¿Te apuntas? Pincha en el partido", open, () => "open")}
+      {block("Amistosos confirmados", "Ya están los 4 jugadores", confirmed, () => "confirmed")}
+      {block("Amistosos jugados", `Últimos ${RECENT_DAYS} días`, played, (m) => (hasResult(m) ? "result" : "noresult"))}
+      <Link
+        href="/amistosos"
+        className="self-center rounded-full bg-lime-400 px-5 py-2 text-sm font-black text-neutral-950 active:scale-95"
+      >
+        🤝 {open.length + confirmed.length ? "Ver o crear amistosos" : "Crear un amistoso"}
+      </Link>
+    </div>
+  );
+}
 
 type Directory = Awaited<ReturnType<typeof loadPairDirectory>>;
 

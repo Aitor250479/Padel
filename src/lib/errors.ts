@@ -5,6 +5,8 @@
  */
 const RULES: [RegExp, string][] = [
   [/duplicate key.*pairs_name/i, "Ya existe una pareja con ese nombre."],
+  [/duplicate key.*friendly_players_match_id_side_slot/i, "Ese hueco ya está ocupado. Elige otro."],
+  [/duplicate key.*friendly_players_pkey/i, "Ese jugador ya está apuntado a este amistoso."],
   [/duplicate key/i, "Eso ya estaba guardado."],
   [/row-level security|permission denied|not authorized/i, "No tienes permiso para hacer eso."],
   [/violates foreign key/i, "No se puede: hay otros datos que dependen de esto."],
