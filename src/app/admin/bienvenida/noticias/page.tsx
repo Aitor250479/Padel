@@ -21,7 +21,7 @@ import {
   matchPending,
   newsEnabled,
   newsOrder,
-  newsVariant,
+  newsVariants,
   type NewsItem,
 } from "@/lib/news";
 import { HOME_MODE_KEY } from "@/lib/welcome";
@@ -90,6 +90,7 @@ export default async function NoticiasPage({
   const get = (key: string) => texts?.find((t) => t.key === key)?.body;
   const showsNews = get(HOME_MODE_KEY) === "noticias";
 
+  const variants = newsVariants(items ?? []);
   const order = newsOrder(
     get(NEWS_ORDER_KEY),
     (items ?? []).map((n) => n.id),
@@ -212,7 +213,7 @@ export default async function NoticiasPage({
                 </div>
                 {n && (
                   <>
-                    <BreakingNews text={n.body} variant={newsVariant(n.id)} />
+                    <BreakingNews text={n.body} variant={variants.get(n.id) ?? 0} />
                     <details>
                       <summary className="cursor-pointer text-sm font-semibold underline">Editar o borrar</summary>
                       <form action={updateNews} className="mt-2 flex flex-col gap-2">

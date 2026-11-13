@@ -32,7 +32,7 @@ import {
   matchPending,
   newsEnabled,
   newsOrder,
-  newsVariant,
+  newsVariants,
   type NewsItem,
 } from "@/lib/news";
 import Notice from "@/components/Notice";
@@ -111,6 +111,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
   const nextMatchups = nextMatches.filter((m) => m.sets_a === null);
   const weekResults = on(NEWS_WEEK_RESULTS_KEY) ? withResult(thisWeekMatches) : [];
   const lastResults = withResult(lastMatches);
+  const variants = newsVariants(items);
   const hasNews = matchups.length + nextMatchups.length + weekResults.length + lastResults.length + items.length > 0;
   const place = (m: Match) =>
     m.booking_place || m.booking_at
@@ -189,7 +190,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
                 return resultNews(id, "Resultados de esta semana", thisWeek, weekResults);
               if (id === FIXED_RESULTS) return resultNews(id, "Resultados de la semana pasada", lastWeek, lastResults);
               const n = items.find((x) => x.id === id);
-              return n && <BreakingNews key={id} text={n.body} variant={newsVariant(n.id)} />;
+              return n && <BreakingNews key={id} text={n.body} variant={variants.get(n.id) ?? 0} />;
             })}
           </div>
         ) : (
