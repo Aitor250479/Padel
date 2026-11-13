@@ -50,8 +50,8 @@ export default async function NivelPage({
         </Link>
         <h1 className="mt-3 mb-4">
           <Image
-            src="/tituloformulario.png"
-            alt={isMe ? "Formulario de nivel" : `Formulario de nivel de ${displayName(player)}`}
+            src="/titulominivel.png"
+            alt={isMe ? "Mi nivel" : `Nivel de ${displayName(player)}`}
             width={1200}
             height={288}
             className="h-auto w-full"
@@ -87,6 +87,16 @@ export default async function NivelPage({
         {showForm ? (
           <form action={saveLevelForm} className="mb-6 flex flex-col gap-4">
             <input type="hidden" name="target" value={player.id} />
+            <h2>
+              <Image
+                src="/tituloformulario.png"
+                alt="Formulario de nivel"
+                width={1200}
+                height={288}
+                className="h-auto w-full"
+                sizes="(max-width: 640px) 100vw, 576px"
+              />
+            </h2>
             <p className="text-sm opacity-80">
               {isMe
                 ? "Contesta con sinceridad: de aquí sale tu nivel inicial y después lo irán ajustando tus partidos oficiales. Solo se rellena una vez."
