@@ -4,6 +4,14 @@ import Header from "@/components/Header";
 import { LEAGUE_COLUMNS, type League } from "@/lib/leagues";
 import { playerStats, winRate, type Record, type StatMatch, type StatPlayer } from "@/lib/player-stats";
 import { leaguePairName } from "@/lib/matches";
+import {
+  FRIENDLY_COLUMNS,
+  FRIENDLY_LEAGUE,
+  FRIENDLY_PLAYER_COLUMNS,
+  friendlyStatRows,
+  type FriendlyMatch,
+  type FriendlyPlayer,
+} from "@/lib/friendlies";
 import { displayName, requireProfile, type Pair, type Profile } from "@/lib/session";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -64,21 +72,37 @@ function RecordTable({ rows, first }: { rows: (Record & { key: string; name: Rea
   );
 }
 
+const TABS = [
+  { value: "oficiales", label: "Oficiales" },
+  { value: "amistosos", label: "Amistosos" },
+  { value: "total", label: "Total" },
+] as const;
+type Tab = (typeof TABS)[number]["value"];
+
 const FORM_STYLE = { G: "bg-emerald-600", E: "bg-gray-400", P: "bg-red-600" } as const;
 const STREAK_TEXT = { G: "victorias", E: "empates", P: "derrotas" } as const;
 
-export default async function StatsPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function StatsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tipo?: string }>;
+}) {
   const { supabase, profile } = await requireProfile();
   const { id } = await params;
   if (!UUID.test(id)) notFound();
+  const tipo = (await searchParams).tipo;
+  const tab: Tab = TABS.find((t) => t.value === tipo)?.value ?? "oficiales";
 
-  const [{ data: player }, { data: mine }, { data: people }, { data: pairs }, { data: leagues }] =
+  const [{ data: player }, { data: mine }, { data: people }, { data: pairs }, { data: leagues }, { data: myFriendlies }] =
     await Promise.all([
       supabase.from("profiles").select("id, email, full_name, is_organizer, pair_id").eq("id", id).maybeSingle<Profile>(),
       supabase.from("match_players").select("match_id").eq("profile_id", id).returns<{ match_id: string }[]>(),
       supabase.from("profiles").select("id, email, full_name, is_organizer, pair_id").returns<Profile[]>(),
       supabase.from("pairs").select("id, name, league_id, player_1, player_2").returns<Pair[]>(),
       supabase.from("leagues").select(LEAGUE_COLUMNS).returns<League[]>(),
+      supabase.from("friendly_players").select("match_id").eq("profile_id", id).returns<{ match_id: string }[]>(),
     ]);
   if (!player) notFound();
 
@@ -96,7 +120,30 @@ export default async function StatsPage({ params }: { params: Promise<{ id: stri
       ])
     : [{ data: [] as StatMatch[] }, { data: [] as StatPlayer[] }];
 
-  const s = playerStats(id, matches ?? [], players ?? []);
+  // Amistosos con resultado en los que jugó.
+  const fids = (myFriendlies ?? []).map((r) => r.match_id);
+  const [{ data: fMatches }, { data: fPlayers }] = fids.length
+    ? await Promise.all([
+        supabase
+          .from("friendly_matches")
+          .select(FRIENDLY_COLUMNS)
+          .in("id", fids)
+          .not("sets_a", "is", null)
+          .returns<FriendlyMatch[]>(),
+        supabase.from("friendly_players").select(FRIENDLY_PLAYER_COLUMNS).in("match_id", fids).returns<FriendlyPlayer[]>(),
+      ])
+    : [{ data: [] as FriendlyMatch[] }, { data: [] as FriendlyPlayer[] }];
+  const friendly = friendlyStatRows(fMatches ?? [], fPlayers ?? []);
+  const official = { matches: matches ?? [], players: players ?? [] };
+  const chosen =
+    tab === "oficiales"
+      ? official
+      : tab === "amistosos"
+        ? friendly
+        : { matches: [...official.matches, ...friendly.matches], players: [...official.players, ...friendly.players] };
+
+  const s = playerStats(id, chosen.matches, chosen.players);
+  const leagueCount = s.byLeague.filter((l) => l.id !== FRIENDLY_LEAGUE).length;
   const nameOf = (pid: string) => {
     const p = (people ?? []).find((x) => x.id === pid);
     return p ? displayName(p) : "Jugador borrado";
@@ -109,10 +156,13 @@ export default async function StatsPage({ params }: { params: Promise<{ id: stri
       return p ? displayName(p) : null;
     });
   };
-  const leagueName = (lid: string) => (leagues ?? []).find((l) => l.id === lid)?.name ?? "Sin liga";
-  const leagueStart = (lid: string) => (leagues ?? []).find((l) => l.id === lid)?.started_at ?? "";
+  const leagueName = (lid: string) =>
+    lid === FRIENDLY_LEAGUE ? "Partidos amistosos" : ((leagues ?? []).find((l) => l.id === lid)?.name ?? "Sin liga");
+  // Los amistosos, al final de la tabla por liga.
+  const leagueStart = (lid: string) =>
+    lid === FRIENDLY_LEAGUE ? "" : ((leagues ?? []).find((l) => l.id === lid)?.started_at ?? "");
   const playerLink = (pid: string) => (
-    <Link href={`/jugadores/${pid}/estadisticas`} className="underline decoration-lime-400 decoration-2 underline-offset-2">
+    <Link href={`/jugadores/${pid}/estadisticas${tab === "oficiales" ? "" : `?tipo=${tab}`}`} className="underline decoration-lime-400 decoration-2 underline-offset-2">
       {nameOf(pid)}
     </Link>
   );
@@ -134,19 +184,44 @@ export default async function StatsPage({ params }: { params: Promise<{ id: stri
         </Link>
         <h1 className="mt-2 text-2xl font-bold">📊 {displayName(player)}</h1>
         <p className="mb-4 text-sm opacity-70">
-          Estadísticas de juego de todas las ligas
+          {tab === "oficiales"
+            ? "Estadísticas de los partidos de liga"
+            : tab === "amistosos"
+              ? "Estadísticas de los partidos amistosos"
+              : "Estadísticas de todos los partidos, de liga y amistosos"}
           {player.pair_id && ` · ahora en ${pairName(player.pair_id)}`}
         </p>
 
+        <nav className="mb-4 flex gap-1 rounded-full bg-neutral-100 p-1 text-sm font-semibold dark:bg-neutral-900" aria-label="Tipo de partidos">
+          {TABS.map((x) => (
+            <Link
+              key={x.value}
+              href={x.value === "oficiales" ? `/jugadores/${id}/estadisticas` : `/jugadores/${id}/estadisticas?tipo=${x.value}`}
+              aria-current={tab === x.value ? "page" : undefined}
+              scroll={false}
+              className={`flex-1 rounded-full px-3 py-1.5 text-center ${
+                tab === x.value ? "bg-neutral-950 text-lime-400" : "opacity-70"
+              }`}
+            >
+              {x.label}
+            </Link>
+          ))}
+        </nav>
+
         {t.played === 0 ? (
           <p className="rounded-xl bg-neutral-50 p-5 text-center dark:bg-neutral-900">
-            Todavía no tiene partidos con resultado confirmado. ¡Las estadísticas llegarán con el
-            primer partido! 🎾
+            {tab === "amistosos"
+              ? "Todavía no tiene amistosos con resultado. ¡Anímate con uno! 🤝"
+              : "Todavía no tiene partidos con resultado confirmado. ¡Las estadísticas llegarán con el primer partido! 🎾"}
           </p>
         ) : (
           <div className="flex flex-col gap-6">
             <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <Tile label="Ligas" value={s.leagues} />
+              {tab === "amistosos" ? (
+                <Tile label="Compañeros" value={s.partners.length} />
+              ) : (
+                <Tile label="Ligas" value={leagueCount} />
+              )}
               <Tile label="Partidos" value={t.played} />
               <Tile label="Victorias" value={`${winRate(t)}%`} sub={`${t.won} de ${t.played}`} />
               <Tile label="Puntos" value={t.points} sub={`${(t.points / t.played).toFixed(1)} por partido`} />
@@ -195,6 +270,7 @@ export default async function StatsPage({ params }: { params: Promise<{ id: stri
               />
             </section>
 
+            {tab !== "amistosos" && (
             <section>
               <h2 className="mb-2 text-lg font-semibold">Por liga</h2>
               <RecordTable
@@ -207,12 +283,15 @@ export default async function StatsPage({ params }: { params: Promise<{ id: stri
                     name: (
                       <>
                         {leagueName(l.id)}
-                        <span className="block text-xs font-normal opacity-60">{l.pairs.map(pairName).join(", ")}</span>
+                        {l.id !== FRIENDLY_LEAGUE && (
+                          <span className="block text-xs font-normal opacity-60">{l.pairs.map(pairName).join(", ")}</span>
+                        )}
                       </>
                     ),
                   }))}
               />
             </section>
+            )}
 
             <section>
               <h2 className="mb-1 text-lg font-semibold">Con cada compañero</h2>
