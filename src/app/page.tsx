@@ -258,17 +258,12 @@ function FriendliesOnHome({
         <Carousel label={title}>{list.map((m, i) => poster(m, kind(m), i))}</Carousel>
       </section>
     );
+  if (!open.length && !confirmed.length && !played.length) return null;
   return (
     <div className="mt-8 flex flex-col gap-8">
       {block("Amistosos con huecos libres", "¿Te apuntas? Pincha en el partido", open, () => "open")}
       {block("Amistosos confirmados", "Ya están los 4 jugadores", confirmed, () => "confirmed")}
       {block("Amistosos jugados", `Últimos ${RECENT_DAYS} días`, played, (m) => (hasResult(m) ? "result" : "noresult"))}
-      <Link
-        href="/amistosos"
-        className="self-center rounded-full bg-lime-400 px-5 py-2 text-sm font-black text-neutral-950 active:scale-95"
-      >
-        🤝 {open.length + confirmed.length ? "Ver o crear amistosos" : "Crear un amistoso"}
-      </Link>
     </div>
   );
 }
