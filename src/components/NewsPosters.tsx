@@ -89,6 +89,8 @@ type ResultTemplate = {
   sets: [number, number][];
   /** Margen izquierdo de cada fila si algo del dibujo tapa la casilla. */
   inset?: [number, number];
+  /** Fin de la zona del nombre en cada fila, si algo del dibujo tapa su parte derecha. */
+  ends?: [number, number];
 };
 const PRESS: Omit<ResultTemplate, "src" | "w" | "h" | "rows"> = {
   name: [13.8, 45.8],
@@ -196,6 +198,33 @@ const RESULT_TEMPLATES: ResultTemplate[] = [
   },
 ];
 
+// Cuatro carteles "Resultado amistoso" (869x426), con la misma maqueta.
+const FRIENDLY_RESULT: Omit<ResultTemplate, "src" | "rows"> = {
+  w: 869,
+  h: 426,
+  name: [14, 53.5],
+  sets: [
+    [54.1, 64.3],
+    [64.8, 75.1],
+    [75.7, 86.1],
+  ],
+};
+const FRIENDLY_ROWS_HIGH: [number, number][] = [
+  [70.7, 83.3],
+  [84.3, 96.5],
+];
+const FRIENDLY_ROWS_LOW: [number, number][] = [
+  [71.8, 84],
+  [85, 96.7],
+];
+export const FRIENDLY_RESULT_TEMPLATES: ResultTemplate[] = [
+  { src: "/resultadoamistoso1.png", ...FRIENDLY_RESULT, rows: FRIENDLY_ROWS_HIGH },
+  { src: "/resultadoamistoso2.png", ...FRIENDLY_RESULT, rows: FRIENDLY_ROWS_HIGH },
+  { src: "/resultadoamistoso3.png", ...FRIENDLY_RESULT, rows: FRIENDLY_ROWS_LOW },
+  // El micrófono de la mascota tapa la parte derecha de la primera fila.
+  { src: "/resultadoamistoso4.png", ...FRIENDLY_RESULT, rows: FRIENDLY_ROWS_LOW, ends: [40.3, 53.5] },
+];
+
 type ResultSide = { name: string; players: string[]; sets: number };
 
 /**
@@ -208,17 +237,26 @@ export function ResultPoster({
   b,
   detail,
   variant = 0,
+  templates = RESULT_TEMPLATES,
+  pending,
+  caption,
 }: {
   a: ResultSide;
   b: ResultSide;
   detail: string | null;
   variant?: number;
+  /** Otros modelos de cartel con la misma maqueta (los de amistosos). */
+  templates?: ResultTemplate[];
+  /** Jugado pero sin resultado: "Pendiente de resultado" en las casillas de los sets. */
+  pending?: boolean;
+  /** Pie del cartel en lugar de "Pareja A 2-1 Pareja B". */
+  caption?: React.ReactNode;
 }) {
-  const t = RESULT_TEMPLATES[variant % RESULT_TEMPLATES.length];
+  const t = templates[variant % templates.length];
   const games = parseSets(detail);
   const rows = [a, b];
   const lefts = (t.inset ?? [1.5, 1.5]).map((i) => t.name[0] + i);
-  const widths = lefts.map((l) => t.name[1] - l - 1);
+  const widths = lefts.map((l, r) => (t.ends?.[r] ?? t.name[1]) - l - 1);
   // Un jugador por línea (si faltan, el nombre de la pareja).
   const rowLines = rows.map((side) => (side.players.length ? side.players.slice(0, 2) : [side.name]));
   // Alto de cada fila en cqw (porcentaje del ancho del cartel).
@@ -244,7 +282,7 @@ export function ResultPoster({
         />
         {rows.map((side, r) => {
           const other = rows[1 - r];
-          const won = side.sets > other.sets;
+          const won = !pending && side.sets > other.sets;
           const lines = rowLines[r];
           const [y0, y1] = t.rows[r];
           const rowCqw = rowHeights[r];
@@ -285,9 +323,28 @@ export function ResultPoster({
             </div>
           );
         })}
+        {pending && (
+          <span
+            className="absolute -translate-y-1/2 rounded bg-[#fbf6e9] py-[0.6cqw] text-center font-black uppercase italic leading-tight text-red-600"
+            style={{
+              left: `${t.sets[0][0]}%`,
+              width: `${t.sets[2][1] - t.sets[0][0]}%`,
+              top: `${(t.rows[0][0] + t.rows[1][1]) / 2}%`,
+              fontSize: `${Math.min(3.2, ((t.rows[1][1] - t.rows[0][0]) * t.h) / t.w / 3)}cqw`,
+            }}
+          >
+            Pendiente
+            <br />
+            de resultado
+          </span>
+        )}
       </div>
       <figcaption className="mt-1 text-center text-sm">
-        {a.name} <strong>{a.sets}-{b.sets}</strong> {b.name}
+        {caption ?? (
+          <>
+            {a.name} <strong>{a.sets}-{b.sets}</strong> {b.name}
+          </>
+        )}
       </figcaption>
     </figure>
   );

@@ -234,13 +234,14 @@ function FriendliesOnHome({
   nameOf,
 }: ReturnType<typeof homeFriendlies> & { players: FriendlyPlayer[]; nameOf: (id: string | null) => string }) {
   const names = (ids: (string | null)[]) => ids.map((id) => (id ? nameOf(id) : null));
-  const poster = (m: FriendlyMatch, kind: "open" | "confirmed" | "result" | "noresult") => {
+  const poster = (m: FriendlyMatch, kind: "open" | "confirmed" | "result" | "noresult", variant: number) => {
     const l = lineup(m, players);
     return (
       <FriendlyPoster
         key={m.id}
         href={`/amistosos/${m.id}`}
         kind={kind}
+        variant={variant}
         a={names(l.a)}
         b={names(l.b)}
         when={formatBooking(m.play_at) ?? ""}
@@ -254,7 +255,7 @@ function FriendliesOnHome({
       <section>
         <h1 className={newsTitle}>{title}</h1>
         <p className={newsSub}>{sub}</p>
-        <Carousel label={title}>{list.map((m) => poster(m, kind(m)))}</Carousel>
+        <Carousel label={title}>{list.map((m, i) => poster(m, kind(m), i))}</Carousel>
       </section>
     );
   return (

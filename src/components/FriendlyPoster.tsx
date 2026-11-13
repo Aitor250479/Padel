@@ -1,4 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
+import { FRIENDLY_RESULT_TEMPLATES, ResultPoster } from "@/components/NewsPosters";
+import { fitFontSize } from "@/lib/news";
 
 export type FriendlyPosterKind = "open" | "confirmed" | "result" | "noresult";
 
@@ -9,10 +12,22 @@ const TITLES: Record<FriendlyPosterKind, string> = {
   noresult: "Amistoso jugado",
 };
 
+// Cuatro carteles "Partido amistoso" (865x420) con la misma maqueta: cuatro
+// casillas de nombre, dos por pareja. Cada partido del carrusel usa uno distinto.
+const ANNOUNCE_TEMPLATES = ["/amistoso1.png", "/amistoso2.png", "/amistoso3.png", "/amistoso4.png"];
+const ANNOUNCE_W = 865;
+const ANNOUNCE_H = 420;
+// Casillas, en porcentaje del cartel: centro vertical de cada fila y borde izquierdo de cada pareja.
+const ANNOUNCE_ROWS = [78.2, 91.6];
+const ANNOUNCE_LEFT = [3.4, 63.6];
+const ANNOUNCE_WIDTH = 32.8;
+// Alto de la casilla en unidades cqw (9,5 % del alto del cartel).
+const ANNOUNCE_MAX_FONT = ((9.5 * ANNOUNCE_H) / ANNOUNCE_W) * 0.62;
+
 /**
- * Cartel de un amistoso para los carruseles del inicio. Mismo formato que los
- * carteles de liga (1672x941). De momento se dibuja con estilos; cuando lleguen
- * las imágenes exclusivas de amistosos se pondrán de fondo con sus zonas medidas.
+ * Cartel de un amistoso para los carruseles del inicio: "Partido amistoso"
+ * para anunciarlo (con huecos o confirmado) y "Resultado amistoso" cuando se
+ * ha jugado.
  */
 export default function FriendlyPoster({
   href,
@@ -22,8 +37,11 @@ export default function FriendlyPoster({
   when,
   place,
   score,
+  variant = 0,
 }: {
   href: string;
+  /** Qué modelo de cartel usar (rota en el carrusel). */
+  variant?: number;
   kind: FriendlyPosterKind;
   /** Nombres de cada pareja; null = hueco libre. */
   a: (string | null)[];
@@ -32,70 +50,92 @@ export default function FriendlyPoster({
   place?: string | null;
   score?: { a: number; b: number; detail: string | null };
 }) {
-  const winner = score ? (score.a > score.b ? "a" : score.b > score.a ? "b" : null) : null;
-  const team = (names: (string | null)[], side: "a" | "b") => (
-    <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-[1.5cqw]">
-      {names.map((n, i) =>
-        n ? (
-          <span
-            key={i}
-            className={`w-full truncate text-center text-[4.2cqw] font-black uppercase leading-tight ${
-              winner === side ? "text-lime-300" : "text-white"
-            }`}
+  if (kind === "open" || kind === "confirmed") {
+    const left = [...a, ...b].filter((n) => !n).length;
+    return (
+      <Link href={href} className="block active:scale-[0.99]" aria-label={`${TITLES[kind]}: ${when}`}>
+        <figure className="w-full">
+          <div
+            className="relative w-full overflow-hidden rounded-xl [container-type:inline-size]"
+            style={{ aspectRatio: `${ANNOUNCE_W} / ${ANNOUNCE_H}` }}
           >
-            {n}
-          </span>
-        ) : (
-          <span
-            key={i}
-            className="rounded-full border-[0.3cqw] border-dashed border-lime-400 px-[3cqw] py-[0.6cqw] text-[3.6cqw] font-extrabold uppercase text-lime-300"
-          >
-            ¡Hueco libre!
-          </span>
-        ),
-      )}
-    </div>
-  );
-
-  return (
-    <Link href={href} className="block active:scale-[0.99]" aria-label={`${TITLES[kind]}: ${when}`}>
-      <div
-        className="relative flex w-full flex-col overflow-hidden rounded-xl bg-gradient-to-br from-neutral-900 via-neutral-950 to-emerald-950 text-white shadow-md [container-type:inline-size]"
-        style={{ aspectRatio: "1672 / 941" }}
-      >
-        <div className="flex items-center justify-center gap-[1.5cqw] bg-lime-400 py-[1.6cqw] text-neutral-950">
-          <span aria-hidden className="text-[4cqw]">
-            🤝
-          </span>
-          <span className="text-[4.4cqw] font-black uppercase italic tracking-tight">{TITLES[kind]}</span>
-        </div>
-        <div className="flex flex-1 items-center gap-[2cqw] px-[4cqw]">
-          {team(a, "a")}
-          <div className="shrink-0 text-center">
-            {score ? (
-              <>
-                <p className="text-[9cqw] font-black tabular-nums leading-none">
-                  {score.a}-{score.b}
-                </p>
-                {score.detail && <p className="mt-[0.8cqw] text-[2.6cqw] font-semibold opacity-80">{score.detail}</p>}
-              </>
-            ) : kind === "noresult" ? (
-              <p className="text-[3.2cqw] font-extrabold uppercase leading-tight text-amber-300">
-                Pendiente
-                <br />
-                de resultado
-              </p>
-            ) : (
-              <p className="text-[8cqw] font-black italic leading-none text-lime-400">VS</p>
+            <Image
+              src={ANNOUNCE_TEMPLATES[variant % ANNOUNCE_TEMPLATES.length]}
+              alt="Partido amistoso"
+              fill
+              sizes="(max-width: 768px) 100vw, 720px"
+              className="object-contain"
+            />
+            {[a, b].map((names, side) =>
+              ANNOUNCE_ROWS.map((top, r) => {
+                const text = names[r] ?? "¡Hueco libre!";
+                return (
+                  <span
+                    key={`${side}-${r}`}
+                    className={`absolute -translate-y-1/2 overflow-hidden text-ellipsis whitespace-nowrap text-center font-black uppercase italic leading-tight ${
+                      names[r] ? "text-neutral-950" : "text-red-600"
+                    }`}
+                    style={{
+                      left: `${ANNOUNCE_LEFT[side]}%`,
+                      width: `${ANNOUNCE_WIDTH}%`,
+                      top: `${top}%`,
+                      fontSize: `${fitFontSize(text, ANNOUNCE_WIDTH, ANNOUNCE_MAX_FONT, 2)}cqw`,
+                    }}
+                  >
+                    {text}
+                  </span>
+                );
+              }),
             )}
           </div>
-          {team(b, "b")}
-        </div>
-        <div className="bg-black/60 px-[3cqw] py-[1.6cqw] text-center text-[3.2cqw] font-bold">
-          📅 {when}
-          {place && <span className="opacity-80"> · 📍 {place}</span>}
-        </div>
-      </div>
+          <figcaption className="mt-1 text-center text-sm">
+            <span className="block">
+              📅 <b>{when}</b>
+              {place ? ` · 📍 ${place}` : ""}
+            </span>
+            {kind === "confirmed" ? (
+              <span className="block font-semibold text-emerald-700 dark:text-emerald-400">✅ Confirmado: ya están los 4</span>
+            ) : (
+              <span className="block font-semibold text-red-600">
+                🔥 {left === 1 ? "Falta 1 jugador" : `Faltan ${left} jugadores`} · ¡Pincha y apúntate!
+              </span>
+            )}
+          </figcaption>
+        </figure>
+      </Link>
+    );
+  }
+
+  // Jugado: cartel de resultado (o pendiente de resultado).
+  const players = (names: (string | null)[]) => names.filter((n): n is string => !!n);
+  const sa = score?.a ?? 0;
+  const sb = score?.b ?? 0;
+  return (
+    <Link href={href} className="block active:scale-[0.99]" aria-label={`${TITLES[kind]}: ${when}`}>
+      <ResultPoster
+        templates={FRIENDLY_RESULT_TEMPLATES}
+        variant={variant}
+        pending={!score}
+        detail={score?.detail ?? null}
+        a={{ name: players(a).join(" y "), players: players(a), sets: sa }}
+        b={{ name: players(b).join(" y "), players: players(b), sets: sb }}
+        caption={
+          <>
+            <span className="block">
+              📅 {when}
+              {place ? ` · 📍 ${place}` : ""}
+            </span>
+            {score ? (
+              <span className="block">
+                {players(a).join(" y ")} <strong>{sa}-{sb}</strong> {players(b).join(" y ")}
+                {sa === sb ? " · empate" : ""}
+              </span>
+            ) : (
+              <span className="block font-semibold text-red-600">📝 Jugado: falta poner el resultado</span>
+            )}
+          </>
+        }
+      />
     </Link>
   );
 }
