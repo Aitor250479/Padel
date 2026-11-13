@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { breakingFontSize, breakingSize, fitFontSize, matchPending, moveInOrder, newsEnabled, newsOrder } from "../src/lib/news.ts";
+import { breakingFontSize, breakingSize, fitFontSize, matchPending, moveInOrder, newsEnabled, newsOrder, newsVariants } from "../src/lib/news.ts";
 
 assert.equal(newsEnabled(undefined), true, "activada por defecto");
 assert.equal(newsEnabled("1"), true);
@@ -46,3 +46,21 @@ assert.equal(matchPending({ sets_a: null, booking_at: "2026-11-11T12:46:00" }, n
 assert.equal(matchPending({ sets_a: null, booking_at: "2026-11-10T19:00:00" }, now), false, "ya jugado: no sale");
 assert.equal(matchPending({ sets_a: 2, booking_at: null }, now), false, "con resultado: no sale");
 console.log("ok partidos pendientes");
+
+// Modelos de breaking news: por turno dentro de cada tamaño, de la más antigua a la más nueva.
+const item = (id: string, len: number, created_at: string, visible = true) => ({ id, body: "x".repeat(len), visible, created_at });
+const v = newsVariants([
+  item("c", 60, "2026-11-03"),
+  item("a", 70, "2026-11-01"),
+  item("b", 50, "2026-11-02"),
+  item("largo", 140, "2026-11-01"),
+  item("oculta", 65, "2026-10-01", false),
+  item("d", 40, "2026-11-04"),
+  item("e", 40, "2026-11-05"),
+]);
+assert.deepEqual(
+  ["a", "b", "c", "d", "e", "oculta", "largo"].map((id) => v.get(id)),
+  [0, 1, 2, 3, 0, 1, 0],
+  "cortas: 0,1,2,3 y vuelve a empezar; las ocultas después; las de otro tamaño, su propio turno",
+);
+console.log("ok modelos de breaking news");

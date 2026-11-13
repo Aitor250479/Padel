@@ -343,22 +343,31 @@ export function ResultPoster({
 // Ocho carteles de "Breaking news": dos por tamaño (hasta 75, 150, 300 y 600
 // caracteres). Caja del texto en porcentaje del cartel: x0, x1, y0, y1.
 type BreakingTemplate = { src: string; w: number; h: number; box: [number, number, number, number] };
+// Cuatro modelos por tamaño (BREAKING_VARIANTS), alternando los antiguos y los nuevos.
 const BREAKING_TEMPLATES: BreakingTemplate[][] = [
   [
     { src: "/breaking1.png", w: 521, h: 152, box: [6, 94, 61, 82] },
+    { src: "/breaking9.png", w: 523, h: 152, box: [5, 95, 67.5, 82.5] },
     { src: "/breaking2.png", w: 521, h: 182, box: [5, 95, 59, 84] },
+    { src: "/breaking10.png", w: 523, h: 182, box: [5, 95, 72.5, 85] },
   ],
   [
     { src: "/breaking3.png", w: 521, h: 243, box: [5, 95, 56, 86] },
+    { src: "/breaking11.png", w: 523, h: 245, box: [6, 94, 58, 85] },
     { src: "/breaking4.png", w: 521, h: 243, box: [5, 95, 56, 86] },
+    { src: "/breaking12.png", w: 523, h: 245, box: [6, 94, 57, 85] },
   ],
   [
     { src: "/breaking5.png", w: 521, h: 331, box: [5, 95, 37, 81] },
+    { src: "/breaking13.png", w: 523, h: 334, box: [6, 94, 40, 85] },
     { src: "/breaking6.png", w: 521, h: 331, box: [5, 95, 37, 81] },
+    { src: "/breaking14.png", w: 523, h: 334, box: [6, 94, 42, 84] },
   ],
   [
     { src: "/breaking7.png", w: 521, h: 585, box: [5, 95, 26, 85] },
+    { src: "/breaking15.png", w: 523, h: 588, box: [6, 94, 26, 89] },
     { src: "/breaking8.png", w: 521, h: 584, box: [5, 95, 26, 85] },
+    { src: "/breaking16.png", w: 523, h: 588, box: [6, 94, 26, 89] },
   ],
 ];
 

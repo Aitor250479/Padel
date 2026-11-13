@@ -22,11 +22,28 @@ export function breakingSize(text: string) {
   return i < 0 ? BREAKING_SIZES.length - 1 : i;
 }
 
-/** Modelo fijo para cada noticia (0 o 1), para que la vista previa y el inicio coincidan. */
-export function newsVariant(id: string) {
-  let sum = 0;
-  for (const c of id) sum += c.charCodeAt(0);
-  return sum % 2;
+/** Modelos de cartel que hay para cada tamaño de noticia. */
+export const BREAKING_VARIANTS = 4;
+
+/**
+ * Modelo de cartel de cada noticia. Dentro de cada tamaño se reparten por
+ * turno, de la más antigua a la más nueva (primero las visibles), para que dos
+ * noticias de longitud parecida no salgan con el mismo cartel. Así la vista
+ * previa de los organizadores y el inicio coinciden.
+ */
+export function newsVariants(items: Pick<NewsItem, "id" | "body" | "visible" | "created_at">[]) {
+  const sorted = [...items].sort(
+    (a, b) => Number(b.visible) - Number(a.visible) || a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id),
+  );
+  const used = new Map<number, number>();
+  const variants = new Map<string, number>();
+  for (const n of sorted) {
+    const size = breakingSize(n.body);
+    const k = used.get(size) ?? 0;
+    variants.set(n.id, k % BREAKING_VARIANTS);
+    used.set(size, k + 1);
+  }
+  return variants;
 }
 
 /**
