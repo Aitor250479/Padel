@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { FRIENDLY_RESULT_TEMPLATES, ResultPoster } from "@/components/NewsPosters";
+import { FRIENDLY_NO_RESULT_TEMPLATES, FRIENDLY_RESULT_TEMPLATES, ResultPoster } from "@/components/NewsPosters";
 import { fitFontSize } from "@/lib/news";
 
 export type FriendlyPosterKind = "open" | "confirmed" | "result" | "noresult";
@@ -113,7 +113,7 @@ export default function FriendlyPoster({
   return (
     <Link href={href} className="block active:scale-[0.99]" aria-label={`${TITLES[kind]}: ${when}`}>
       <ResultPoster
-        templates={FRIENDLY_RESULT_TEMPLATES}
+        templates={score ? FRIENDLY_RESULT_TEMPLATES : FRIENDLY_NO_RESULT_TEMPLATES}
         variant={variant}
         pending={!score}
         detail={score?.detail ?? null}

@@ -224,6 +224,11 @@ export const FRIENDLY_RESULT_TEMPLATES: ResultTemplate[] = [
   // El micrófono de la mascota tapa la parte derecha de la primera fila.
   { src: "/resultadoamistoso4.png", ...FRIENDLY_RESULT, rows: FRIENDLY_ROWS_LOW, ends: [40.3, 53.5] },
 ];
+// Los mismos cuatro con "Sin resultado" en las casillas de los sets.
+export const FRIENDLY_NO_RESULT_TEMPLATES: ResultTemplate[] = FRIENDLY_RESULT_TEMPLATES.map((t, i) => ({
+  ...t,
+  src: `/sinresultadoamistoso${i + 1}.png`,
+}));
 
 type ResultSide = { name: string; players: string[]; sets: number };
 
@@ -247,7 +252,7 @@ export function ResultPoster({
   variant?: number;
   /** Otros modelos de cartel con la misma maqueta (los de amistosos). */
   templates?: ResultTemplate[];
-  /** Jugado pero sin resultado: "Pendiente de resultado" en las casillas de los sets. */
+  /** Jugado pero sin resultado: nadie sale como ganador. */
   pending?: boolean;
   /** Pie del cartel en lugar de "Pareja A 2-1 Pareja B". */
   caption?: React.ReactNode;
@@ -323,21 +328,6 @@ export function ResultPoster({
             </div>
           );
         })}
-        {pending && (
-          <span
-            className="absolute -translate-y-1/2 rounded bg-[#fbf6e9] py-[0.6cqw] text-center font-black uppercase italic leading-tight text-red-600"
-            style={{
-              left: `${t.sets[0][0]}%`,
-              width: `${t.sets[2][1] - t.sets[0][0]}%`,
-              top: `${(t.rows[0][0] + t.rows[1][1]) / 2}%`,
-              fontSize: `${Math.min(3.2, ((t.rows[1][1] - t.rows[0][0]) * t.h) / t.w / 3)}cqw`,
-            }}
-          >
-            Pendiente
-            <br />
-            de resultado
-          </span>
-        )}
       </div>
       <figcaption className="mt-1 text-center text-sm">
         {caption ?? (
