@@ -143,10 +143,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
     m.booking_place || m.booking_at
       ? `📍 ${[m.booking_place, formatBooking(m.booking_at)].filter(Boolean).join(" · ")}`
       : "📍 Pendiente de reservar";
-  const matchupNews = (id: string, title: string, week: string, list: Match[]) =>
+  const matchupNews = (id: string, title: string, image: string, week: string, list: Match[]) =>
     list.length > 0 && (
       <section key={id}>
-        <h1 className={newsTitle}>{title}</h1>
+        <NewsTitleImage title={title} image={image} />
         <p className={newsSub}>Semana del {formatWeekLong(week)}</p>
         <Carousel label={title}>
           {list.map((m, i) => (
@@ -166,10 +166,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
         </Carousel>
       </section>
     );
-  const resultNews = (id: string, title: string, week: string, list: Match[]) =>
+  const resultNews = (id: string, title: string, image: string, week: string, list: Match[]) =>
     list.length > 0 && (
       <section key={id}>
-        <h1 className={newsTitle}>{title}</h1>
+        <NewsTitleImage title={title} image={image} />
         <p className={newsSub}>Semana del {formatWeekLong(week)}</p>
         <Carousel label={title}>
           {list.map((m, i) => (
@@ -206,12 +206,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
           <div className="flex flex-col gap-8">
             {order.top.map((id) => {
               if (id === FIXED_MATCHUPS)
-                return matchupNews(id, "Enfrentamientos de la semana", thisWeek, matchups);
+                return matchupNews(id, "Enfrentamientos de la semana", "/tituloenfrentamientos1.png", thisWeek, matchups);
               if (id === FIXED_NEXT_MATCHUPS)
-                return matchupNews(id, "Enfrentamientos de la próxima semana", nextWeek, nextMatchups);
+                return matchupNews(id, "Enfrentamientos de la próxima semana", "/tituloenfrentamientos2.png", nextWeek, nextMatchups);
               if (id === FIXED_WEEK_RESULTS)
-                return resultNews(id, "Resultados de esta semana", thisWeek, weekResults);
-              if (id === FIXED_RESULTS) return resultNews(id, "Resultados de la semana pasada", lastWeek, lastResults);
+                return resultNews(id, "Resultados de esta semana", "/tituloresultados1.png", thisWeek, weekResults);
+              if (id === FIXED_RESULTS) return resultNews(id, "Resultados de la semana pasada", "/tituloresultados2.png", lastWeek, lastResults);
               if (id !== CUSTOM_NEWS || !order.custom.length) return null;
               // Las noticias de los organizadores, juntas en un carrusel.
               return (
@@ -255,6 +255,15 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
 const newsTitle =
   "text-center text-2xl font-black uppercase italic tracking-tight after:mx-auto after:mt-1.5 after:block after:h-1 after:w-16 after:rounded-full after:bg-lime-400 after:content-['']";
 const newsSub = "mb-2 mt-3 text-center text-xs font-semibold opacity-60";
+
+/** Título de una noticia fija con su cartel (1200 px de ancho). */
+function NewsTitleImage({ title, image }: { title: string; image: string }) {
+  return (
+    <h1>
+      <Image src={image} alt={title} width={1200} height={288} className="h-auto w-full" sizes="(max-width: 768px) 100vw, 768px" />
+    </h1>
+  );
+}
 
 /** Los tres carruseles de amistosos: con huecos, confirmados y jugados. */
 function FriendliesOnHome({
