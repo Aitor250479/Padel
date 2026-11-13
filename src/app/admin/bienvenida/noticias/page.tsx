@@ -20,7 +20,8 @@ import {
   NEWS_WEEK_RESULTS_KEY,
   matchPending,
   newsEnabled,
-  newsOrder,
+  CUSTOM_NEWS,
+  groupedNewsOrder,
   newsVariants,
   type NewsItem,
 } from "@/lib/news";
@@ -91,10 +92,11 @@ export default async function NoticiasPage({
   const showsNews = get(HOME_MODE_KEY) === "noticias";
 
   const variants = newsVariants(items ?? []);
-  const order = newsOrder(
+  const order = groupedNewsOrder(
     get(NEWS_ORDER_KEY),
     (items ?? []).map((n) => n.id),
   );
+  const shown = (items ?? []).filter((n) => n.visible).length;
   const fixed = [
     {
       id: FIXED_MATCHUPS,
@@ -152,89 +154,97 @@ export default async function NoticiasPage({
 
         <p className="mb-2 text-sm opacity-70">
           Salen en el inicio en este orden: usa las flechas para subirlas o bajarlas. Las noticias
-          nuevas se añaden al final.
+          escritas por los organizadores van juntas en un carrusel; dentro de él también se ordenan
+          con sus flechas, y las nuevas se añaden al final.
         </p>
         <ol className="mb-6 flex flex-col gap-3">
-          {order.map((id, i) => {
-            const f = fixed.find((x) => x.id === id);
-            const n = items?.find((x) => x.id === id);
-            if (!f && !n) return null;
-            const on = f ? newsEnabled(get(f.key)) : n!.visible;
-            const title = f ? f.title : n!.body;
-            return (
-              <li key={id} className="flex flex-col gap-2 rounded-xl border border-gray-200 p-3 dark:border-gray-800">
-                <div className="flex items-center gap-3">
-                  <form action={moveNews} className="flex shrink-0 flex-col items-center">
-                    <input type="hidden" name="id" value={id} />
-                    <SubmitButton
-                      name="dir"
-                      value="up"
-                      pendingText=""
-                      disabled={i === 0}
-                      aria-label={`Subir: ${title}`}
-                      className="px-2 text-lg leading-none disabled:opacity-20"
-                    >
-                      ▲
-                    </SubmitButton>
-                    <span className="text-xs font-bold opacity-60">{i + 1}</span>
-                    <SubmitButton
-                      name="dir"
-                      value="down"
-                      pendingText=""
-                      disabled={i === order.length - 1}
-                      aria-label={`Bajar: ${title}`}
-                      className="px-2 text-lg leading-none disabled:opacity-20"
-                    >
-                      ▼
-                    </SubmitButton>
-                  </form>
-                  {f ? (
-                    <>
-                      <span aria-hidden className="text-2xl">
-                        {f.icon}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block font-semibold">{f.title}</span>
-                        <span className="block text-sm opacity-70">{f.text}</span>
-                      </span>
-                    </>
-                  ) : (
-                    <span className="min-w-0 flex-1 text-sm">
-                      <span className="block font-semibold">📢 Noticia · {on ? "se muestra" : "no se muestra"}</span>
-                      <span className="block opacity-70">
-                        Creada el {new Date(n!.created_at).toLocaleDateString("es-ES", { timeZone: "Europe/Madrid" })}
+          {order.top.map((id, i) => {
+            const arrows = (
+              <Arrows id={id} index={i} count={order.top.length} title={id === CUSTOM_NEWS ? "Noticias" : (fixed.find((x) => x.id === id)?.title ?? "")} />
+            );
+            if (id === CUSTOM_NEWS) {
+              return (
+                <li key={id} className="flex flex-col gap-3 rounded-xl border-2 border-lime-400 p-3">
+                  <div className="flex items-center gap-3">
+                    {arrows}
+                    <span aria-hidden className="text-2xl">
+                      📢
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-semibold">Noticias (carrusel)</span>
+                      <span className="block text-sm opacity-70">
+                        {(items ?? []).length === 0
+                          ? "Todavía no hay noticias. Escribe una abajo."
+                          : `${shown} de ${(items ?? []).length} se muestran. Se pasan con el dedo en el inicio.`}
                       </span>
                     </span>
+                  </div>
+                  {order.custom.length > 0 && (
+                    <ol className="flex flex-col gap-3">
+                      {order.custom.map((nid, j) => {
+                        const n = items!.find((x) => x.id === nid)!;
+                        return (
+                          <li key={nid} className="flex flex-col gap-2 rounded-xl border border-gray-200 p-3 dark:border-gray-800">
+                            <div className="flex items-center gap-3">
+                              <Arrows id={nid} index={j} count={order.custom.length} title={n.body} carousel />
+                              <span className="min-w-0 flex-1 text-sm">
+                                <span className="block font-semibold">
+                                  Noticia {j + 1} · {n.visible ? "se muestra" : "no se muestra"}
+                                </span>
+                                <span className="block opacity-70">
+                                  Creada el {new Date(n.created_at).toLocaleDateString("es-ES", { timeZone: "Europe/Madrid" })}
+                                </span>
+                              </span>
+                              <form action={toggleNews}>
+                                <input type="hidden" name="id" value={nid} />
+                                <Switch on={n.visible} label={n.body} />
+                              </form>
+                            </div>
+                            <BreakingNews text={n.body} variant={variants.get(n.id) ?? 0} />
+                            <details>
+                              <summary className="cursor-pointer text-sm font-semibold underline">Editar o borrar</summary>
+                              <form action={updateNews} className="mt-2 flex flex-col gap-2">
+                                <input type="hidden" name="id" value={n.id} />
+                                <NewsTextarea defaultValue={n.body} className={field} />
+                                <div className="flex flex-wrap gap-2">
+                                  <SubmitButton className="rounded-lg bg-gray-800 px-3 py-2 font-semibold text-white">
+                                    Guardar
+                                  </SubmitButton>
+                                  <ConfirmButton
+                                    formAction={deleteNews}
+                                    message="¿Borrar esta noticia? No se puede deshacer."
+                                    className="rounded-lg border border-red-600 px-3 py-2 font-semibold text-red-700 dark:text-red-400"
+                                  >
+                                    Borrar
+                                  </ConfirmButton>
+                                </div>
+                              </form>
+                            </details>
+                          </li>
+                        );
+                      })}
+                    </ol>
                   )}
-                  <form action={f ? toggleFixedNews : toggleNews}>
-                    {f ? <input type="hidden" name="key" value={f.key} /> : <input type="hidden" name="id" value={id} />}
-                    <Switch on={on} label={title} />
-                  </form>
-                </div>
-                {n && (
-                  <>
-                    <BreakingNews text={n.body} variant={variants.get(n.id) ?? 0} />
-                    <details>
-                      <summary className="cursor-pointer text-sm font-semibold underline">Editar o borrar</summary>
-                      <form action={updateNews} className="mt-2 flex flex-col gap-2">
-                        <input type="hidden" name="id" value={n.id} />
-                        <NewsTextarea defaultValue={n.body} className={field} />
-                        <div className="flex flex-wrap gap-2">
-                          <SubmitButton className="rounded-lg bg-gray-800 px-3 py-2 font-semibold text-white">
-                            Guardar
-                          </SubmitButton>
-                          <ConfirmButton
-                            formAction={deleteNews}
-                            message="¿Borrar esta noticia? No se puede deshacer."
-                            className="rounded-lg border border-red-600 px-3 py-2 font-semibold text-red-700 dark:text-red-400"
-                          >
-                            Borrar
-                          </ConfirmButton>
-                        </div>
-                      </form>
-                    </details>
-                  </>
-                )}
+                </li>
+              );
+            }
+            const f = fixed.find((x) => x.id === id);
+            if (!f) return null;
+            const on = newsEnabled(get(f.key));
+            return (
+              <li key={id} className="flex items-center gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-800">
+                {arrows}
+                <span aria-hidden className="text-2xl">
+                  {f.icon}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold">{f.title}</span>
+                  <span className="block text-sm opacity-70">{f.text}</span>
+                </span>
+                <form action={toggleFixedNews}>
+                  <input type="hidden" name="key" value={f.key} />
+                  <Switch on={on} label={f.title} />
+                </form>
               </li>
             );
           })}
@@ -250,5 +260,36 @@ export default async function NoticiasPage({
         </form>
       </main>
     </>
+  );
+}
+
+/** Flechas para subir o bajar una noticia (o, con `carousel`, una noticia dentro del carrusel). */
+function Arrows({ id, index, count, title, carousel }: { id: string; index: number; count: number; title: string; carousel?: boolean }) {
+  return (
+    <form action={moveNews} className="flex shrink-0 flex-col items-center">
+      <input type="hidden" name="id" value={id} />
+      {carousel && <input type="hidden" name="scope" value="carrusel" />}
+      <SubmitButton
+        name="dir"
+        value="up"
+        pendingText=""
+        disabled={index === 0}
+        aria-label={`Subir: ${title}`}
+        className="px-2 text-lg leading-none disabled:opacity-20"
+      >
+        ▲
+      </SubmitButton>
+      <span className="text-xs font-bold opacity-60">{index + 1}</span>
+      <SubmitButton
+        name="dir"
+        value="down"
+        pendingText=""
+        disabled={index === count - 1}
+        aria-label={`Bajar: ${title}`}
+        className="px-2 text-lg leading-none disabled:opacity-20"
+      >
+        ▼
+      </SubmitButton>
+    </form>
   );
 }

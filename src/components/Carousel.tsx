@@ -22,7 +22,7 @@ export default function Carousel({ children, label }: { children: ReactNode; lab
           const el = e.currentTarget;
           setIndex(Math.round(el.scrollLeft / Math.max(1, el.clientWidth)));
         }}
-        className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex snap-x snap-mandatory items-center overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {items.map((item, i) => (
           <div key={i} className="w-full shrink-0 snap-center" aria-label={`${i + 1} de ${items.length}`}>

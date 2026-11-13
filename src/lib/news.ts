@@ -117,6 +117,32 @@ export function matchPending(m: { sets_a: number | null; booking_at: string | nu
 }
 
 /** Sube (-1) o baja (+1) una noticia un puesto. */
+/** Id del bloque de noticias propias (el carrusel) dentro del orden. */
+export const CUSTOM_NEWS = "noticias";
+
+/**
+ * Orden en dos niveles: `top` son las fijas y el bloque de noticias propias
+ * (CUSTOM_NEWS), y `custom` el orden de las propias dentro de su carrusel.
+ * Se guarda todo en la misma lista (ver joinNewsOrder). En un orden guardado
+ * antes del carrusel, el bloque va donde estaba la primera noticia propia.
+ */
+export function groupedNewsOrder(saved: string | undefined, customIds: string[]) {
+  const full = newsOrder(saved, customIds);
+  const isCustom = (id: string) => customIds.includes(id);
+  const custom = full.filter(isCustom);
+  const top = full.filter((id) => !isCustom(id));
+  const tokens = (saved ?? "").split(",");
+  const token = tokens.indexOf(CUSTOM_NEWS);
+  const before =
+    token >= 0
+      ? tokens.slice(0, token)
+      : full.slice(0, full.findIndex(isCustom) < 0 ? full.length : full.findIndex(isCustom));
+  top.splice(before.filter((id) => top.includes(id)).length, 0, CUSTOM_NEWS);
+  return { top, custom };
+}
+
+export const joinNewsOrder = (o: { top: string[]; custom: string[] }) => [...o.top, ...o.custom].join(",");
+
 export function moveInOrder(order: string[], id: string, dir: -1 | 1) {
   const i = order.indexOf(id);
   const j = i + dir;
