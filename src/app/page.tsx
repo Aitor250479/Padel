@@ -31,7 +31,8 @@ import {
   NEWS_WEEK_RESULTS_KEY,
   matchPending,
   newsEnabled,
-  newsOrder,
+  CUSTOM_NEWS,
+  groupedNewsOrder,
   newsVariants,
   type NewsItem,
 } from "@/lib/news";
@@ -112,6 +113,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
   const weekResults = on(NEWS_WEEK_RESULTS_KEY) ? withResult(thisWeekMatches) : [];
   const lastResults = withResult(lastMatches);
   const variants = newsVariants(items);
+  const order = groupedNewsOrder(
+    get(NEWS_ORDER_KEY),
+    items.map((n) => n.id),
+  );
   const hasNews = matchups.length + nextMatchups.length + weekResults.length + lastResults.length + items.length > 0;
   const place = (m: Match) =>
     m.booking_place || m.booking_at
@@ -178,10 +183,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
 
         {showNews && hasNews ? (
           <div className="flex flex-col gap-8">
-            {newsOrder(
-              get(NEWS_ORDER_KEY),
-              items.map((n) => n.id),
-            ).map((id) => {
+            {order.top.map((id) => {
               if (id === FIXED_MATCHUPS)
                 return matchupNews(id, "Enfrentamientos de la semana", thisWeek, matchups);
               if (id === FIXED_NEXT_MATCHUPS)
@@ -189,8 +191,15 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
               if (id === FIXED_WEEK_RESULTS)
                 return resultNews(id, "Resultados de esta semana", thisWeek, weekResults);
               if (id === FIXED_RESULTS) return resultNews(id, "Resultados de la semana pasada", lastWeek, lastResults);
-              const n = items.find((x) => x.id === id);
-              return n && <BreakingNews key={id} text={n.body} variant={variants.get(n.id) ?? 0} />;
+              if (id !== CUSTOM_NEWS || !order.custom.length) return null;
+              // Las noticias de los organizadores, juntas en un carrusel.
+              return (
+                <Carousel key={id} label="Noticias">
+                  {order.custom.map((nid) => (
+                    <BreakingNews key={nid} text={items.find((x) => x.id === nid)!.body} variant={variants.get(nid) ?? 0} />
+                  ))}
+                </Carousel>
+              );
             })}
           </div>
         ) : (

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { breakingFontSize, breakingSize, fitFontSize, matchPending, moveInOrder, newsEnabled, newsOrder, newsVariants } from "../src/lib/news.ts";
+import { breakingFontSize, breakingSize, fitFontSize, matchPending, moveInOrder, newsEnabled, newsOrder, newsVariants, groupedNewsOrder, joinNewsOrder } from "../src/lib/news.ts";
 
 assert.equal(newsEnabled(undefined), true, "activada por defecto");
 assert.equal(newsEnabled("1"), true);
@@ -64,3 +64,20 @@ assert.deepEqual(
   "cortas: 0,1,2,3 y vuelve a empezar; las ocultas después; las de otro tamaño, su propio turno",
 );
 console.log("ok modelos de breaking news");
+
+// Noticias propias agrupadas en un carrusel
+{
+  const fixed = ["enfrentamientos", "enfrentamientos_proxima", "resultados_semana", "resultados"];
+  assert.deepEqual(groupedNewsOrder(undefined, ["n2", "n1"]), { top: [...fixed, "noticias"], custom: ["n2", "n1"] }, "por defecto, al final");
+  assert.deepEqual(
+    groupedNewsOrder("enfrentamientos,n1,resultados,n2", ["n2", "n1"]).top,
+    ["enfrentamientos", "enfrentamientos_proxima", "noticias", "resultados_semana", "resultados"],
+    "orden antiguo: el bloque va donde estaba la primera propia",
+  );
+  const g = groupedNewsOrder("noticias,enfrentamientos,n1,resultados,n2", ["n2", "n1", "n3"]);
+  assert.deepEqual(g.top[0], "noticias");
+  assert.deepEqual(g.custom, ["n1", "n2", "n3"], "las nuevas, al final del carrusel");
+  const moved = { top: moveInOrder(g.top, "noticias", 1), custom: moveInOrder(g.custom, "n3", -1) };
+  assert.deepEqual(groupedNewsOrder(joinNewsOrder(moved), ["n2", "n1", "n3"]), moved, "se guarda y se lee igual");
+  console.log("ok carrusel de noticias");
+}
