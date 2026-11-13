@@ -1,22 +1,25 @@
 // Nivel de cada jugador, de 1,00 a 10, calculado con los partidos oficiales.
 // Sin imports de ejecución para poder probarlo con node directamente.
 //
-//  * Nivel inicial: sale del formulario (1,00 + 0,25 por punto, tope 6,50).
+//  * Nivel inicial: sale del formulario, la mitad de (1,00 + 0,25 por punto),
+//    entre 1,00 y 3,25.
 //    Quien no lo ha rellenado empieza en 1,00.
 //  * Nivel de una pareja = media de sus jugadores en ese partido.
 //  * Resultado esperado = 1 / (1 + 10^(nivel rival - nivel propio)).
 //  * Lo que vale el resultado: 2-0 = 1, 2-1 = 0,8, 1-1 = 0,5, 1-2 = 0,2, 0-2 = 0.
-//  * Cambio = 0,4 × (resultado - esperado), igual para los dos de la pareja.
+//  * Cambio = 0,2 × (resultado - esperado), igual para los dos de la pareja.
 //    Ganando nunca se baja y perdiendo nunca se sube. Entre 1,00 y 10.
 //  * Se recalcula siempre desde cero con todos los partidos, por orden.
 
 export const MIN_LEVEL = 1;
 export const MAX_LEVEL = 10;
 export const DEFAULT_LEVEL = 1;
-export const K = 0.4;
+export const K = 0.2;
 export const POINT_VALUE = 0.25;
-/** Del 7 al 10 queda para jugadores de competición: no sale de un formulario. */
-export const MAX_INITIAL = 6.5;
+/** Lo más alto que da el formulario: de ahí para arriba solo se sube jugando. */
+export const MAX_INITIAL = 3.25;
+/** El formulario da la mitad de (1,00 + 0,25 por punto). */
+export const FORM_FACTOR = 0.5;
 
 export type LevelQuestion = { key: string; text: string; options: string[] };
 
@@ -101,7 +104,7 @@ export function validAnswers(answers: number[]) {
 /** Nivel inicial a partir de las respuestas del formulario. */
 export function initialLevelFrom(answers: number[]) {
   const points = answers.reduce((n, a) => n + a, 0);
-  return Math.min(MAX_INITIAL, round2(MIN_LEVEL + points * POINT_VALUE));
+  return Math.max(MIN_LEVEL, Math.min(MAX_INITIAL, round2((MIN_LEVEL + points * POINT_VALUE) * FORM_FACTOR)));
 }
 
 /** Lo que vale un resultado en sets para quien lo saca (2-0 = 1 ... 0-2 = 0). */
