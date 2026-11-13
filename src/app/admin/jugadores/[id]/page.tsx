@@ -80,6 +80,13 @@ export default async function PlayerPage({
           <span>📊 Estadísticas de juego</span>
           <span aria-hidden className="text-lime-400">›</span>
         </Link>
+        <Link
+          href={isMe ? "/nivel" : `/nivel?jugador=${player.id}`}
+          className="mb-4 flex items-center justify-between rounded-xl bg-neutral-950 p-4 font-semibold text-white hover:bg-neutral-800"
+        >
+          <span>🎯 Nivel: formulario y nivel inicial</span>
+          <span aria-hidden className="text-lime-400">›</span>
+        </Link>
 
         <div className="flex flex-col gap-4">
           <section className={card}>

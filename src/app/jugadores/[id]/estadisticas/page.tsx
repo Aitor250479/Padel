@@ -4,6 +4,8 @@ import Header from "@/components/Header";
 import { LEAGUE_COLUMNS, type League } from "@/lib/leagues";
 import { playerStats, winRate, type Record, type StatMatch, type StatPlayer } from "@/lib/player-stats";
 import { leaguePairName } from "@/lib/matches";
+import LevelCard from "@/components/LevelCard";
+import { loadLevels } from "@/lib/level-data";
 import {
   FRIENDLY_COLUMNS,
   FRIENDLY_LEAGUE,
@@ -95,7 +97,7 @@ export default async function StatsPage({
   const tipo = (await searchParams).tipo;
   const tab: Tab = TABS.find((t) => t.value === tipo)?.value ?? "oficiales";
 
-  const [{ data: player }, { data: mine }, { data: people }, { data: pairs }, { data: leagues }, { data: myFriendlies }] =
+  const [{ data: player }, { data: mine }, { data: people }, { data: pairs }, { data: leagues }, { data: myFriendlies }, { levels }] =
     await Promise.all([
       supabase.from("profiles").select("id, email, full_name, is_organizer, pair_id").eq("id", id).maybeSingle<Profile>(),
       supabase.from("match_players").select("match_id").eq("profile_id", id).returns<{ match_id: string }[]>(),
@@ -103,6 +105,7 @@ export default async function StatsPage({
       supabase.from("pairs").select("id, name, league_id, player_1, player_2").returns<Pair[]>(),
       supabase.from("leagues").select(LEAGUE_COLUMNS).returns<League[]>(),
       supabase.from("friendly_players").select("match_id").eq("profile_id", id).returns<{ match_id: string }[]>(),
+      loadLevels(supabase),
     ]);
   if (!player) notFound();
 
@@ -191,6 +194,8 @@ export default async function StatsPage({
               : "Estadísticas de todos los partidos, de liga y amistosos"}
           {player.pair_id && ` · ahora en ${pairName(player.pair_id)}`}
         </p>
+
+        <LevelCard level={levels.get(id)} isMe={isMe} isOrganizer={profile.is_organizer} playerId={id} />
 
         <nav className="mb-4 flex gap-1 rounded-full bg-neutral-100 p-1 text-sm font-semibold dark:bg-neutral-900" aria-label="Tipo de partidos">
           {TABS.map((x) => (
