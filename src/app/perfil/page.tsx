@@ -29,6 +29,13 @@ export default async function PerfilPage({
           <span>📊 Estadísticas de juego</span>
           <span aria-hidden className="text-lime-400">›</span>
         </Link>
+        <Link
+          href="/nivel"
+          className="-mt-4 mb-6 flex items-center justify-between rounded-xl bg-neutral-950 p-4 font-semibold text-white hover:bg-neutral-800"
+        >
+          <span>🎯 Mi nivel</span>
+          <span aria-hidden className="text-lime-400">›</span>
+        </Link>
         {params.nueva && (
           <p className="mb-4 rounded-lg bg-amber-100 p-3 text-sm text-amber-900">
             Crea aquí abajo tu nueva contraseña.

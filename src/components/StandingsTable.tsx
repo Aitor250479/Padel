@@ -10,12 +10,15 @@ export default function StandingsTable({
   hrefFor,
   highlight,
   label = "Pareja",
+  levelOf,
 }: {
   rows: Row[];
   nameOf: (id: string) => string;
   hrefFor?: (id: string) => string;
   highlight?: string | null;
   label?: string;
+  /** Clasificación individual: nivel de cada jugador. */
+  levelOf?: (id: string) => string;
 }) {
   return (
     <div className="overflow-x-auto">
@@ -30,6 +33,11 @@ export default function StandingsTable({
             <th className="px-1 text-center" title="Perdidos">P</th>
             <th className="px-1 text-center" title="Sets a favor y en contra">Sets</th>
             <th className="pl-1 text-center font-bold" title="Puntos">Pts</th>
+            {levelOf && (
+              <th className="pl-2 text-center" title="Nivel (de 1,00 a 10)">
+                Nivel
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -60,6 +68,7 @@ export default function StandingsTable({
                 {r.setsFor}-{r.setsAgainst}
               </td>
               <td className="pl-1 text-center font-bold">{r.points}</td>
+              {levelOf && <td className="pl-2 text-center text-xs font-semibold opacity-80">{levelOf(r.id)}</td>}
             </tr>
           ))}
         </tbody>

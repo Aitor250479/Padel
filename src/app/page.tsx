@@ -81,7 +81,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
   // Lo pendiente del jugador, las encuestas y las noticias se cargan a la vez.
   const withResult = (ms: Match[]) => ms.filter((m) => m.sets_a !== null && m.sets_b !== null);
   const none = Promise.resolve([] as Match[]);
-  const [todos, polls, thisWeekMatches, nextMatches, lastMatches, items, friendlies, people] = await Promise.all([
+  const [todos, polls, thisWeekMatches, nextMatches, lastMatches, items, friendlies, people, hasLevel] = await Promise.all([
     profile.active !== false && (directory.pairsOf(profile).length || isIndividual(league))
       ? loadTodos(supabase, profile, directory.pairsOf(profile), league, directory)
       : Promise.resolve([]),
@@ -100,9 +100,30 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
       : Promise.resolve([] as NewsItem[]),
     loadFriendlies(supabase, { since: daysBefore(now, RECENT_DAYS) }),
     loadPeople(supabase),
+    // Formulario de nivel (migración 021). Si la tabla no existe, no se avisa.
+    inactive
+      ? Promise.resolve(true)
+      : supabase
+          .from("player_levels")
+          .select("profile_id")
+          .eq("profile_id", profile.id)
+          .maybeSingle()
+          .then(({ data, error }) => !!data || !!error),
   ]);
+  const levelTodo: Todo[] = hasLevel
+    ? []
+    : [
+        {
+          tone: "action",
+          icon: "🎯",
+          title: "Calcula tu nivel",
+          text: "Contesta 8 preguntas rápidas y tendrás tu nivel de jugador, que después irán moviendo tus partidos.",
+          href: "/nivel",
+        },
+      ];
   const cards = [
     ...todos,
+    ...levelTodo,
     ...friendlyTodos(profile.id, friendlies.matches, friendlies.players, now, formatBooking),
     ...polls,
   ];

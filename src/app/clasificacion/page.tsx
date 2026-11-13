@@ -2,6 +2,9 @@ import SubmitButton from "@/components/SubmitButton";
 import Link from "next/link";
 import ConfirmButton from "@/components/ConfirmButton";
 import Header from "@/components/Header";
+import LevelInfo from "@/components/LevelInfo";
+import { formatLevel } from "@/lib/level";
+import { loadLevels } from "@/lib/level-data";
 import Notice from "@/components/Notice";
 import StandingsTable from "@/components/StandingsTable";
 import StandingsTabs from "@/components/StandingsTabs";
@@ -39,7 +42,16 @@ export default async function ClasificacionPage({
     current,
     pairs.map((p) => p.id),
   );
-  const players = individual ? await leaguePlayerStandings(supabase, matches, { includeCurrentPlayers: true, individual: individualLeague }) : null;
+  const [players, levelData] = individual
+    ? await Promise.all([
+        leaguePlayerStandings(supabase, matches, { includeCurrentPlayers: true, individual: individualLeague }),
+        loadLevels(supabase),
+      ])
+    : [null, null];
+  const levelOf = (id: string) => {
+    const l = levelData?.levels.get(id);
+    return l?.rated ? formatLevel(l.level) : "–";
+  };
 
   return (
     <>
@@ -62,13 +74,18 @@ export default async function ClasificacionPage({
               label="Jugador"
               highlight={profile.id}
               hrefFor={(id) => `/jugadores/${id}/estadisticas`}
+              levelOf={levelOf}
             />
             <p className="mt-2 text-xs opacity-60">
               {individualLeague
                 ? "Liga individual: cada semana cambian las parejas y cada jugador suma los puntos de sus partidos."
                 : "Cada jugador suma los puntos de los partidos que ha jugado, con la pareja que tenía en cada partido."}{" "}
-              Pulsa en un jugador para ver sus estadísticas.
+              Pulsa en un jugador para ver sus estadísticas y la evolución de su nivel. «–» = no ha rellenado
+              el formulario de nivel.
             </p>
+            <div id="nivel" className="mt-4 scroll-mt-20">
+              <LevelInfo />
+            </div>
           </>
         ) : (
           <>
