@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import ConfirmButton from "@/components/ConfirmButton";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
-import { canNameOrganizers, displayName, requireOrganizer, type Pair, type Profile } from "@/lib/session";
+import { displayName, isLeagueAdmin, requireOrganizer, type Pair, type Profile } from "@/lib/session";
 import {
   assignPlayer,
   deletePlayer,
@@ -27,15 +27,16 @@ export default async function PlayerPage({
   const { id } = await params;
   const { error, ok } = await searchParams;
 
-  const [{ data: player }, { data: pairs }, nameOrganizers] = await Promise.all([
+  const [{ data: player }, { data: pairs }] = await Promise.all([
     supabase
       .from("profiles")
       .select("*")
       .eq("id", id)
       .maybeSingle<Profile>(),
     supabase.from("pairs").select("id, name").is("league_id", null).order("name").returns<Pair[]>(),
-    canNameOrganizers(supabase, profile),
   ]);
+  // Solo el superadmin y los organizadores de liga nombran organizadores.
+  const nameOrganizers = isLeagueAdmin(profile);
   if (!player || player.deleted_at) notFound();
 
   const pair = (pairs ?? []).find((p) => p.id === player.pair_id);

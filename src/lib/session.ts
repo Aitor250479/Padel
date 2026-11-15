@@ -15,6 +15,8 @@ export type Profile = {
   is_superadmin?: boolean;
   /** Categoría del jugador; vacía = pendiente de categoría (migración 023). */
   category_id?: string | null;
+  /** Ligas que organiza (no es columna: se rellena en requireProfile, migración 024). */
+  league_admin_of?: string[];
 };
 
 export type Pair = {
@@ -35,12 +37,13 @@ export async function requireProfile() {
   const userId = data?.claims?.sub;
   if (!userId) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .single<Profile>();
+  const [{ data: profile }, { data: leagueAdmin }] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", userId).single<Profile>(),
+    // Antes de la migración 024 la tabla no existe: queda vacío.
+    supabase.from("competition_admins").select("competition_id").eq("profile_id", userId),
+  ]);
   if (!profile) redirect("/login");
+  profile.league_admin_of = (leagueAdmin ?? []).map((r: { competition_id: string }) => r.competition_id);
   // Un desactivado puede entrar a consultar; uno eliminado ya no tiene cuenta.
   if (profile.deleted_at) {
     await supabase.auth.signOut();
@@ -56,13 +59,15 @@ export async function requireOrganizer() {
   return ctx;
 }
 
-/** ¿Puede nombrar organizadores? Solo el superadmin y los organizadores de liga (migración 024). */
-export async function canNameOrganizers(supabase: Awaited<ReturnType<typeof createClient>>, profile: Profile) {
-  if (profile.is_superadmin) return true;
-  const { data, error } = await supabase.rpc("is_any_league_admin");
-  // Antes de la migración 024 la función no existe: como hasta ahora, cualquier organizador.
-  if (error) return profile.is_organizer;
-  return data === true;
+/** Superadmin u organizador de alguna liga: gestiona ligas y categorías, nombra organizadores. */
+export function isLeagueAdmin(profile: Profile) {
+  return !!profile.is_superadmin || (profile.league_admin_of?.length ?? 0) > 0;
+}
+
+export async function requireLeagueAdmin() {
+  const ctx = await requireProfile();
+  if (!isLeagueAdmin(ctx.profile) || ctx.profile.active === false) redirect("/");
+  return ctx;
 }
 
 export function displayName(p: Pick<Profile, "full_name" | "email">) {
