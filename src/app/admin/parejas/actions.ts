@@ -70,6 +70,22 @@ export async function toggleOrganizer(formData: FormData) {
   done(path, error ? { error } : { ok: makeOrganizer ? "Ahora es organizador" : "Ya no es organizador" });
 }
 
+/** Organizador de liga: cambia a un jugador de categoría (solo en el descanso). */
+export async function setPlayerCategory(formData: FormData) {
+  const { supabase } = await requireOrganizer();
+  const playerId = String(formData.get("player_id"));
+  const categoryId = String(formData.get("category_id") ?? "");
+  const path = `/admin/jugadores/${playerId}`;
+  if (!categoryId) return done(path, { error: { message: "Elige una categoría" } });
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ category_id: categoryId })
+    .eq("id", playerId)
+    .select("id");
+  if (!error && !data?.length) return done(path, { error: { message: "No puedes cambiar a ese jugador de categoría" } });
+  done(path, error ? { error } : { ok: "Categoría cambiada. Ha salido de su pareja: asígnale una nueva en su categoría." });
+}
+
 export async function savePlayerName(formData: FormData) {
   const { supabase } = await requireOrganizer();
   const playerId = String(formData.get("player_id"));

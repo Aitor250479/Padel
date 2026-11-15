@@ -11,6 +11,7 @@ import {
   savePlayerName,
   setPlayerActive,
   setPlayerEmail,
+  setPlayerCategory,
   setPlayerPassword,
   toggleOrganizer,
 } from "../../parejas/actions";
@@ -38,6 +39,21 @@ export default async function PlayerPage({
   // Solo el superadmin y los organizadores de liga nombran organizadores.
   const nameOrganizers = isLeagueAdmin(profile);
   if (!player || player.deleted_at) notFound();
+
+  // Cambio de categoría (organizador de liga): solo con su categoría en descanso.
+  type Cat = { id: string; name: string; competition_id: string };
+  const [{ data: categories }, { data: playing }] = nameOrganizers
+    ? await Promise.all([
+        supabase.from("categories").select("id, name, competition_id").order("created_at").returns<Cat[]>(),
+        player.category_id
+          ? supabase.rpc("category_playing", { cat: player.category_id })
+          : Promise.resolve({ data: false }),
+      ])
+    : [{ data: [] as Cat[] }, { data: false }];
+  const ownCategory = (categories ?? []).find((c) => c.id === player.category_id);
+  const targets = (categories ?? []).filter(
+    (c) => c.id !== player.category_id && (!ownCategory || c.competition_id === ownCategory.competition_id),
+  );
 
   const pair = (pairs ?? []).find((p) => p.id === player.pair_id);
   const back = `/admin/jugadores/${player.id}`;
@@ -166,6 +182,42 @@ export default async function PlayerPage({
               <SubmitButton className={button}>Guardar</SubmitButton>
             </form>
           </section>
+
+          {nameOrganizers && (
+            <section className={card}>
+              <h2 className="mb-1 font-semibold">Categoría</h2>
+              <p className="mb-3 text-sm opacity-70">
+                {ownCategory ? (
+                  <>
+                    Juega en <b>{ownCategory.name}</b>.{" "}
+                    {playing
+                      ? "Solo se puede cambiar de categoría cuando la suya está en el descanso entre temporadas."
+                      : "Su categoría está en el descanso: puedes cambiarle de categoría. Saldrá de su pareja y dejará de ser organizador."}
+                  </>
+                ) : (
+                  "Pendiente de categoría: elige en cuál va a jugar."
+                )}
+              </p>
+              {!playing && targets.length > 0 && (
+                <form action={setPlayerCategory} className="flex gap-2">
+                  <input type="hidden" name="player_id" value={player.id} />
+                  <select name="category_id" required defaultValue="" className={`${input} min-w-0 flex-1`}>
+                    <option value="" disabled>
+                      Elige categoría…
+                    </option>
+                    {targets.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ConfirmButton message={`¿Cambiar a ${displayName(player)} de categoría?`} className={button}>
+                    Cambiar
+                  </ConfirmButton>
+                </form>
+              )}
+            </section>
+          )}
 
           {!isMe && !inactive && nameOrganizers && (
             <section className={card}>

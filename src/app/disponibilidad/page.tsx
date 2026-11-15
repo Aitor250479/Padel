@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
 import { currentLeague, isIndividual } from "@/lib/leagues";
+import RestNotice from "@/components/RestNotice";
 import { displayName, requireProfile, type Pair, type Profile } from "@/lib/session";
 import { addDays, currentWeek, formatWeekLong, parseWeek, weekLabel, weeksFromNow } from "@/lib/weeks";
 import { setAvailability } from "./actions";
@@ -70,6 +71,7 @@ export default async function DisponibilidadPage({
       <main className="mx-auto max-w-xl px-4 py-6">
         <h1 className="mb-4 text-2xl font-bold">Disponibilidad</h1>
         <Notice error={params.error} />
+        <RestNotice league={league}>Ya puedes marcar las semanas a partir de esa fecha.</RestNotice>
 
         <section className="mb-6 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
           <div className="mb-4 flex items-center gap-2">
