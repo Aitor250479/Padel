@@ -5,7 +5,7 @@ import Notice from "@/components/Notice";
 import SubmitButton from "@/components/SubmitButton";
 import { displayName, requireLeagueAdmin, type Profile } from "@/lib/session";
 import { button, card, input, rowLink } from "../../../parejas/ui";
-import { renameCategory } from "../../actions";
+import { manageCategory, renameCategory } from "../../actions";
 import type { Category, Competition } from "../../ui";
 
 type SeasonRow = { id: string; name: string; kind: string; started_at: string; ended_at: string | null };
@@ -60,6 +60,22 @@ export default async function CategoriaPage({
         <h1 className="mt-2 text-2xl font-bold">{category.name}</h1>
         <p className="mb-4 text-sm opacity-70">Categoría de {competition?.name}</p>
         <Notice ok={ok} error={error} />
+
+        {profile.active_category?.id === category.id ? (
+          <p className="mb-6 rounded-xl border border-lime-400 bg-lime-50 p-4 text-sm dark:bg-neutral-900">
+            📍 <b>Estás gestionando esta categoría.</b> Partidos, disponibilidad, parejas y clasificación
+            muestran los de {category.name}.
+          </p>
+        ) : (
+          <form action={manageCategory} className={`${card} mb-6`}>
+            <input type="hidden" name="id" value={category.id} />
+            <p className="mb-3 text-sm opacity-70">
+              Ahora gestionas {profile.active_category?.name ?? "otra categoría"}. Cambia a esta para ver y
+              organizar sus partidos, disponibilidad, parejas y clasificación.
+            </p>
+            <SubmitButton pendingText="Cambiando…" className={button}>📍 Gestionar {category.name}</SubmitButton>
+          </form>
+        )}
 
         <section className={`${card} mb-6`}>
           <h2 className="mb-2 font-semibold">Nombre</h2>

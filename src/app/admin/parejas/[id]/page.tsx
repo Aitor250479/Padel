@@ -22,7 +22,7 @@ export default async function PairPage({
   const [{ data: pair }, { data: players }] = await Promise.all([
     supabase.from("pairs").select("id, name").eq("id", id).maybeSingle<Pair>(),
     supabase
-      .from("profiles")
+      .from("category_players")
       .select("*")
       .order("full_name")
       .returns<Profile[]>(),

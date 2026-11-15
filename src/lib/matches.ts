@@ -35,15 +35,19 @@ export function leaguePairName(
 
 /** Nombres de parejas y de sus jugadores, para mostrar partidos. */
 export async function loadPairDirectory(supabase: SupabaseClient) {
-  const [{ data: allPairs }, { data: players }] = await Promise.all([
+  const [{ data: allPairs }, { data: players }, { data: ownPairs }, { data: ownPlayers }] = await Promise.all([
     supabase.from("pairs").select("id, name, league_id, player_1, player_2").order("name").returns<Pair[]>(),
     supabase
       .from("profiles")
       .select("id, email, full_name, is_organizer, pair_id, active")
       .returns<Profile[]>(),
+    // Lo de la categoría que se está viendo (migración 025).
+    supabase.from("category_pairs").select("id").returns<{ id: string }[]>(),
+    supabase.from("category_players").select("id").returns<{ id: string }[]>(),
   ]);
-  // Parejas fijas (las de Parejas) y parejas de un partido de liga individual.
-  const pairs = (allPairs ?? []).filter((p) => !p.league_id);
+  const inCategory = new Set([...(ownPairs ?? []), ...(ownPlayers ?? [])].map((x) => x.id));
+  // Parejas fijas de la categoría (las de Parejas) y parejas de un partido de liga individual.
+  const pairs = (allPairs ?? []).filter((p) => !p.league_id && inCategory.has(p.id));
   const leaguePairs = (allPairs ?? []).filter((p) => p.league_id);
   const pairName = (id: string) => {
     const pair = allPairs?.find((p) => p.id === id);
@@ -86,7 +90,18 @@ export async function loadPairDirectory(supabase: SupabaseClient) {
       const p = players?.find((x) => x.id === pid);
       return p ? displayName(p) : "Jugador";
     });
-  return { pairs, pairName, playersOf, pairsOf, sideOf, membersOf, memberNames, isLeaguePair, players: players ?? [] };
+  return {
+    pairs,
+    pairName,
+    playersOf,
+    pairsOf,
+    sideOf,
+    membersOf,
+    memberNames,
+    isLeaguePair,
+    /** Jugadores de la categoría que se está viendo (para elegir en listas). */
+    players: (players ?? []).filter((p) => inCategory.has(p.id)),
+  };
 }
 
 const WEEKDAYS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];

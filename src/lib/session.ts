@@ -17,7 +17,11 @@ export type Profile = {
   category_id?: string | null;
   /** Ligas que organiza (no es columna: se rellena en requireProfile, migración 024). */
   league_admin_of?: string[];
+  /** Categoría que está viendo: la suya, o la que gestiona un organizador de liga (migración 025). */
+  active_category?: ActiveCategory | null;
 };
+
+export type ActiveCategory = { id: string; name: string; competition_id: string; competition_name: string };
 
 export type Pair = {
   id: string;
@@ -37,13 +41,17 @@ export async function requireProfile() {
   const userId = data?.claims?.sub;
   if (!userId) redirect("/login");
 
-  const [{ data: profile }, { data: leagueAdmin }] = await Promise.all([
+  const [{ data: profile }, { data: leagueAdmin }, { data: category }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", userId).single<Profile>(),
-    // Antes de la migración 024 la tabla no existe: queda vacío.
+    // Antes de las migraciones 024 y 025 no existen: quedan vacíos.
     supabase.from("competition_admins").select("competition_id").eq("profile_id", userId),
+    supabase.rpc("active_category").maybeSingle<ActiveCategory>(),
   ]);
   if (!profile) redirect("/login");
   profile.league_admin_of = (leagueAdmin ?? []).map((r: { competition_id: string }) => r.competition_id);
+  profile.active_category = category ?? null;
+  // Un organizador de liga es organizador de cualquier categoría de su liga.
+  if (isLeagueAdmin(profile) && profile.active !== false) profile.is_organizer = true;
   // Un desactivado puede entrar a consultar; uno eliminado ya no tiene cuenta.
   if (profile.deleted_at) {
     await supabase.auth.signOut();

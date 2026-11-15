@@ -2,6 +2,8 @@
 
 import { friendlyError } from "@/lib/errors";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { CATEGORY_COOKIE } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { requireLeagueAdmin } from "@/lib/session";
 
@@ -93,6 +95,22 @@ export async function renameCategory(formData: FormData) {
   if (!name) return done(path, { error: { message: "El nombre no puede estar vacío" } });
   const { error } = await supabase.from("categories").update({ name }).eq("id", id);
   done(path, error ? { error } : { ok: "Nombre de la categoría cambiado" });
+}
+
+/** Elige la categoría que gestiona (y ve) en toda la web. */
+export async function manageCategory(formData: FormData) {
+  const { supabase } = await requireLeagueAdmin();
+  const id = String(formData.get("id"));
+  const { data } = await supabase.rpc("manages_category", { cat: id });
+  if (data !== true) return done(HOME, { error: { message: "No gestionas esa categoría" } });
+  (await cookies()).set(CATEGORY_COOKIE, id, {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: true,
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  done(HOME, { ok: "Ahora estás gestionando esa categoría en toda la web" });
 }
 
 export async function addLeagueAdmin(formData: FormData) {

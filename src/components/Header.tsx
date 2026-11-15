@@ -40,7 +40,11 @@ export default function Header({ profile }: { profile: Profile }) {
               <span className="block text-lg font-extrabold leading-tight tracking-tight">
                 Torneo Pádel Loyola
               </span>
-              <span className="block text-xs text-lime-300">Hola, {displayName(profile)}</span>
+              <span className="block text-xs text-lime-300">
+                Hola, {displayName(profile)}
+                {/* Quien gestiona varias categorías ve cuál tiene elegida. */}
+                {isLeagueAdmin(profile) && profile.active_category && ` · 📍 ${profile.active_category.name}`}
+              </span>
             </span>
           </Link>
           <form action="/auth/signout" method="post" className="ml-auto shrink-0">

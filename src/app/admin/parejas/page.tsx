@@ -16,9 +16,9 @@ export default async function ParejasPage({
   const { error, ok } = await searchParams;
 
   const [{ data: pairs }, { data: players }, league] = await Promise.all([
-    supabase.from("pairs").select("id, name").is("league_id", null).order("name").returns<Pair[]>(),
+    supabase.from("category_pairs").select("id, name").is("league_id", null).order("name").returns<Pair[]>(),
     supabase
-      .from("profiles")
+      .from("category_players")
       .select("*")
       .order("full_name")
       .returns<Profile[]>(),

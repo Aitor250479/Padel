@@ -33,7 +33,7 @@ export default async function PlayerPage({
       .select("*")
       .eq("id", id)
       .maybeSingle<Profile>(),
-    supabase.from("pairs").select("id, name").is("league_id", null).order("name").returns<Pair[]>(),
+    supabase.from("category_pairs").select("id, name").is("league_id", null).order("name").returns<Pair[]>(),
   ]);
   // Solo el superadmin y los organizadores de liga nombran organizadores.
   const nameOrganizers = isLeagueAdmin(profile);
