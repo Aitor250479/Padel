@@ -7,7 +7,7 @@ export async function availablePairIds(
 ) {
   const [{ data: players }, { data: answers }] = await Promise.all([
     supabase
-      .from("profiles")
+      .from("category_players")
       .select("id, pair_id")
       .not("pair_id", "is", null)
       .returns<{ id: string; pair_id: string }[]>(),
@@ -30,7 +30,7 @@ export async function availablePairIds(
 /** Jugadores activos que han dicho que pueden jugar esa semana (liga individual). */
 export async function availablePlayerIds(supabase: SupabaseClient, weekStart: string) {
   const [{ data: players }, { data: answers }] = await Promise.all([
-    supabase.from("profiles").select("id, active").returns<{ id: string; active?: boolean }[]>(),
+    supabase.from("category_players").select("id, active").returns<{ id: string; active?: boolean }[]>(),
     supabase
       .from("player_availability")
       .select("profile_id")

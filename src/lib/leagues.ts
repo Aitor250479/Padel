@@ -15,10 +15,10 @@ export const LEAGUE_COLUMNS = "id, name, started_at, ended_at, kind";
 
 export const isIndividual = (league: League | null | undefined) => league?.kind === "individual";
 
-/** Liga en curso (o null si todavía no se ha ejecutado la migración de ligas). */
+/** Temporada en curso de la categoría que se está viendo (migración 025). */
 export async function currentLeague(supabase: SupabaseClient) {
   const { data } = await supabase
-    .from("leagues")
+    .from("category_seasons")
     .select(LEAGUE_COLUMNS)
     .is("ended_at", null)
     .maybeSingle<League>();

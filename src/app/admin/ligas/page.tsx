@@ -46,7 +46,8 @@ export default async function LigasPage({
         <p className="mb-4 text-sm opacity-70">
           {superadmin
             ? "Como superadmin ves todas las ligas. Los jugadores solo ven la suya y entran directamente en su categoría."
-            : "Gestionas las categorías de tu liga. Los jugadores solo ven la suya y entran directamente en su categoría."}
+            : "Gestionas las categorías de tu liga. Los jugadores solo ven la suya y entran directamente en su categoría."}{" "}
+          📍 marca la categoría que estás gestionando: entra en otra para cambiar.
         </p>
         <Notice ok={ok} error={error} />
 
@@ -88,7 +89,9 @@ export default async function LigasPage({
                       <li key={cat.id}>
                         <Link href={`/admin/ligas/categoria/${cat.id}`} className={rowLink}>
                           <span className="min-w-0">
-                            <span className="block font-semibold">{cat.name}</span>
+                            <span className="block font-semibold">
+                              {cat.name} {profile.active_category?.id === cat.id && "📍"}
+                            </span>
                             <span className="block truncate text-sm opacity-70">
                               {members.length} jugador{members.length === 1 ? "" : "es"}
                               {season ? ` · ${season.name} (${season.kind})` : " · sin temporada en curso"}

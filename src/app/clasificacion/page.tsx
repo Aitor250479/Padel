@@ -30,7 +30,8 @@ export default async function ClasificacionPage({
 
   const [{ pairs, pairName }, { data: leagues }] = await Promise.all([
     loadPairDirectory(supabase),
-    supabase.from("leagues").select(LEAGUE_COLUMNS).order("started_at", { ascending: false }).returns<League[]>(),
+    // Temporadas de la categoría que se está viendo.
+    supabase.from("category_seasons").select(LEAGUE_COLUMNS).order("started_at", { ascending: false }).returns<League[]>(),
   ]);
   const current = (leagues ?? []).find((l) => !l.ended_at) ?? null;
   const previous = (leagues ?? []).filter((l) => l.ended_at);

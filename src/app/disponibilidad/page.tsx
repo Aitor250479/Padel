@@ -25,9 +25,9 @@ export default async function DisponibilidadPage({
   const offset = weeksFromNow(weekStart, thisWeek);
 
   const [{ data: pairs }, { data: everyone }, { data: answers }, league] = await Promise.all([
-    supabase.from("pairs").select("id, name").is("league_id", null).order("name").returns<Pair[]>(),
+    supabase.from("category_pairs").select("id, name").is("league_id", null).order("name").returns<Pair[]>(),
     supabase
-      .from("profiles")
+      .from("category_players")
       .select("id, email, full_name, is_organizer, pair_id, active")
       .order("created_at")
       .returns<Profile[]>(),

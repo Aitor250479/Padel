@@ -121,8 +121,8 @@ export async function applyRandomPairs(formData: FormData) {
   }
 
   const [{ data: pairs }, { data: players }] = await Promise.all([
-    supabase.from("pairs").select("id, name").is("league_id", null),
-    supabase.from("profiles").select("*").in("id", ids),
+    supabase.from("category_pairs").select("id, name").is("league_id", null),
+    supabase.from("category_players").select("*").in("id", ids),
   ]);
   if ((players ?? []).length !== ids.length) {
     return done(retry, { error: { message: "Algún jugador ya no existe, vuelve a sortear" } });
@@ -135,8 +135,17 @@ export async function applyRandomPairs(formData: FormData) {
   }
 
   if (all) {
-    const { error } = await supabase.from("profiles").update({ pair_id: null }).not("pair_id", "is", null);
-    if (error) return done(retry, { error });
+    // Solo los jugadores de esta categoría.
+    const { data: paired } = await supabase
+      .from("category_players")
+      .select("id")
+      .not("pair_id", "is", null)
+      .returns<{ id: string }[]>();
+    const pairedIds = (paired ?? []).map((p) => p.id);
+    if (pairedIds.length) {
+      const { error } = await supabase.from("profiles").update({ pair_id: null }).in("id", pairedIds);
+      if (error) return done(retry, { error });
+    }
   }
 
   for (const g of groups) {
@@ -157,7 +166,7 @@ export async function applyRandomPairs(formData: FormData) {
 
 /** Da de alta un jugador con email y contraseña (sin que tenga que registrarse él). */
 export async function createPlayer(formData: FormData) {
-  const { supabase } = await requireOrganizer();
+  const { supabase, profile } = await requireOrganizer();
   const path = "/admin/parejas";
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
@@ -172,7 +181,13 @@ export async function createPlayer(formData: FormData) {
     const already = /already|registered|exists/i.test(error?.message ?? "");
     return done(path, { error: { message: already ? "Ya hay un jugador con ese email" : (error?.message ?? "No se ha podido crear") } });
   }
-  // El perfil lo crea la base de datos al dar de alta la cuenta; aquí solo se pone el nombre.
+  // El perfil lo crea la base de datos al dar de alta la cuenta; se pone en la
+  // categoría que se está gestionando (con la clave de servicio: un organizador
+  // de categoría no puede cambiar categorías).
+  const category = profile.active_category?.id;
+  if (category) {
+    await admin.from("profiles").update({ category_id: category }).eq("id", data.user.id);
+  }
   if (fullName) {
     await supabase.from("profiles").update({ full_name: fullName }).eq("id", data.user.id);
   }

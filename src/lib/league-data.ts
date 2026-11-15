@@ -37,7 +37,7 @@ export async function leaguePlayerStandings(
   { includeCurrentPlayers = false, individual = false } = {},
 ) {
   const played = matches.filter((m) => m.status !== "cancelado" && m.sets_a !== null).map((m) => m.id);
-  const [{ data: players }, { data: people }] = await Promise.all([
+  const [{ data: players }, { data: people }, { data: current }] = await Promise.all([
     played.length
       ? supabase
           .from("match_players")
@@ -46,11 +46,13 @@ export async function leaguePlayerStandings(
           .returns<MatchPlayerRow[]>()
       : Promise.resolve({ data: [] as MatchPlayerRow[] }),
     supabase.from("profiles").select("id, email, full_name, is_organizer, pair_id, active").returns<Profile[]>(),
+    // Los que salen con 0 son los jugadores de esta categoría.
+    includeCurrentPlayers
+      ? supabase.from("category_players").select("id, pair_id, active").returns<Pick<Profile, "id" | "pair_id" | "active">[]>()
+      : Promise.resolve({ data: [] as Pick<Profile, "id" | "pair_id" | "active">[] }),
   ]);
   const everyone = people ?? [];
-  const base = includeCurrentPlayers
-    ? everyone.filter((p) => p.active !== false && (individual || p.pair_id)).map((p) => p.id)
-    : [];
+  const base = (current ?? []).filter((p) => p.active !== false && (individual || p.pair_id)).map((p) => p.id);
   const rows = computePlayerStandings(base, matches, players ?? []).map(({ playerId, ...r }) => {
     const p = everyone.find((x) => x.id === playerId);
     return { id: playerId, ...r, note: p && p.active === false ? "(baja)" : undefined };
