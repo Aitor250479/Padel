@@ -25,7 +25,7 @@ export async function saveHomeMode(formData: FormData) {
   const mode: HomeMode = formData.get("modo") === "noticias" ? "noticias" : "texto";
   const { error } = await supabase
     .from("site_texts")
-    .upsert({ key: HOME_MODE_KEY, body: mode, updated_at: new Date().toISOString(), updated_by: profile.id });
+    .upsert({ key: HOME_MODE_KEY, body: mode, updated_at: new Date().toISOString(), updated_by: profile.id }, { onConflict: "category_id,key" });
   if (error) return done({ error: friendlyError(error.message) });
   done({ ok: OK_TEXT[mode] });
 }
@@ -36,7 +36,7 @@ export async function saveWelcomeText(formData: FormData) {
   const body = String(formData.get("body") ?? "").trim();
   const { error } = await supabase
     .from("site_texts")
-    .upsert({ key: WELCOME_KEY, body, updated_at: new Date().toISOString(), updated_by: profile.id });
+    .upsert({ key: WELCOME_KEY, body, updated_at: new Date().toISOString(), updated_by: profile.id }, { onConflict: "category_id,key" });
   revalidatePath("/", "layout");
   const [key, value] = error ? ["error", friendlyError(error.message)] : ["ok", "Texto de bienvenida guardado."];
   redirect(`${PATH}/texto?${key}=${encodeURIComponent(value)}`);

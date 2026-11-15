@@ -70,12 +70,12 @@ export default async function NoticiasPage({
       .then(({ data }) => data ?? []);
   const [{ data: texts }, { data: items }, current, next, last] = await Promise.all([
     supabase
-      .from("site_texts")
+      .from("category_texts")
       .select("key, body")
       .in("key", [HOME_MODE_KEY, ...FIXED_NEWS_KEYS, NEWS_ORDER_KEY])
       .returns<{ key: string; body: string }[]>(),
     supabase
-      .from("news_items")
+      .from("category_news")
       .select("id, body, visible, created_at")
       .order("created_at", { ascending: false })
       .returns<NewsItem[]>(),

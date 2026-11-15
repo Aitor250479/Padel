@@ -26,7 +26,7 @@ export async function toggleFixedNews(formData: FormData) {
   const on = formData.get("on") === "1";
   const { error } = await supabase
     .from("site_texts")
-    .upsert({ key, body: on ? "1" : "0", updated_at: new Date().toISOString(), updated_by: profile.id });
+    .upsert({ key, body: on ? "1" : "0", updated_at: new Date().toISOString(), updated_by: profile.id }, { onConflict: "category_id,key" });
   if (error) return done({ error: friendlyError(error.message) });
   done({ ok: on ? "Noticia activada." : "Noticia desactivada." });
 }
@@ -78,8 +78,8 @@ export async function moveNews(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const dir = formData.get("dir") === "up" ? -1 : 1;
   const [{ data: saved }, { data: items }] = await Promise.all([
-    supabase.from("site_texts").select("body").eq("key", NEWS_ORDER_KEY).maybeSingle<{ body: string }>(),
-    supabase.from("news_items").select("id").order("created_at", { ascending: false }).returns<{ id: string }[]>(),
+    supabase.from("category_texts").select("body").eq("key", NEWS_ORDER_KEY).maybeSingle<{ body: string }>(),
+    supabase.from("category_news").select("id").order("created_at", { ascending: false }).returns<{ id: string }[]>(),
   ]);
   const current = groupedNewsOrder(saved?.body, (items ?? []).map((n) => n.id));
   const order =
@@ -88,7 +88,7 @@ export async function moveNews(formData: FormData) {
       : { ...current, top: moveInOrder(current.top, id, dir) };
   const { error } = await supabase
     .from("site_texts")
-    .upsert({ key: NEWS_ORDER_KEY, body: joinNewsOrder(order), updated_at: new Date().toISOString(), updated_by: profile.id });
+    .upsert({ key: NEWS_ORDER_KEY, body: joinNewsOrder(order), updated_at: new Date().toISOString(), updated_by: profile.id }, { onConflict: "category_id,key" });
   if (error) return done({ error: friendlyError(error.message) });
   done({ ok: "Orden cambiado." });
 }
