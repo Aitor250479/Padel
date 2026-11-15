@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import NavPills from "@/components/NavPills";
-import { displayName, type Profile } from "@/lib/session";
+import { displayName, isLeagueAdmin, type Profile } from "@/lib/session";
 
 export default function Header({ profile }: { profile: Profile }) {
   const items = [
@@ -16,6 +16,9 @@ export default function Header({ profile }: { profile: Profile }) {
           { href: "/admin/parejas", label: "Parejas", icon: "👥", also: ["/admin/jugadores"] },
           { href: "/admin/bienvenida", label: "Pantalla de inicio", icon: "🏠" },
         ]
+      : []),
+    ...(isLeagueAdmin(profile) && profile.active !== false
+      ? [{ href: "/admin/ligas", label: "Ligas", icon: "🏟️" }]
       : []),
   ];
 
