@@ -19,7 +19,7 @@ export default async function EncuestasPage({
   const { supabase, profile } = await requireOrganizer();
   const { error, ok } = await searchParams;
   const [{ data: polls }, { data: options }, { data: votes }] = await Promise.all([
-    supabase.from("polls").select(POLL_COLUMNS).order("created_at", { ascending: false }).returns<Poll[]>(),
+    supabase.from("category_polls").select(POLL_COLUMNS).order("created_at", { ascending: false }).returns<Poll[]>(),
     supabase.from("poll_options").select("id, poll_id, position, label").returns<PollOption[]>(),
     // Solo llegan los votos de las encuestas cerradas (y el mío de las abiertas).
     supabase.from("poll_votes").select("poll_id, profile_id, option_id").returns<(PollVote & { poll_id: string })[]>(),

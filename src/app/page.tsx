@@ -58,13 +58,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
   // Desactivado: entra a consultar, con su imagen arriba y sin tareas pendientes.
   const inactive = profile.active === false;
   const { data: texts } = await supabase
-    .from("site_texts")
+    .from("category_texts")
     .select("key, body")
     .in("key", [WELCOME_KEY, HOME_MODE_KEY, ...FIXED_NEWS_KEYS, NEWS_ORDER_KEY])
     .returns<{ key: string; body: string }[]>();
   const get = (key: string) => texts?.find((t) => t.key === key)?.body;
   const showNews = get(HOME_MODE_KEY) === "noticias";
-  const text = get(WELCOME_KEY)?.trim() || "¡Bienvenidos al Torneo Pádel Loyola! 🎾";
+  const text = get(WELCOME_KEY)?.trim() || `¡Bienvenidos a ${profile.active_category?.competition_name ?? "Torneo Pádel Loyola"}! 🎾`;
   const now = nowInSpain();
   const thisWeek = currentWeek();
   const lastWeek = addDays(thisWeek, -7);
@@ -92,7 +92,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
     on(NEWS_RESULTS_KEY) ? weekMatches(lastWeek) : none,
     showNews
       ? supabase
-          .from("news_items")
+          .from("category_news")
           .select("id, body, visible, created_at")
           .eq("visible", true)
           .order("created_at", { ascending: false })
@@ -320,7 +320,7 @@ async function loadPollTodos(
 ): Promise<Todo[]> {
   // El resultado se enseña como mucho 720 horas (30 días) tras el cierre.
   const { data: polls } = await supabase
-    .from("polls")
+    .from("category_polls")
     .select(POLL_COLUMNS)
     .gte("closes_at", addHoursLocal(now, -720))
     .order("closes_at", { ascending: true })

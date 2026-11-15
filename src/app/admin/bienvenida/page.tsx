@@ -19,7 +19,7 @@ export default async function BienvenidaPage({
   const { supabase, profile } = await requireOrganizer();
   const { error, ok } = await searchParams;
   const { data } = await supabase
-    .from("site_texts")
+    .from("category_texts")
     .select("key, body")
     .in("key", [WELCOME_KEY, HOME_MODE_KEY, ...FIXED_NEWS_KEYS])
     .returns<{ key: string; body: string }[]>();
@@ -30,13 +30,13 @@ export default async function BienvenidaPage({
   // Encuestas que salen ahora como tarjeta en el inicio, y noticias activadas.
   const [{ data: polls }, { count: customOn }, { count: customAll }] = await Promise.all([
     supabase
-      .from("polls")
+      .from("category_polls")
       .select(POLL_COLUMNS)
       .gte("closes_at", addHoursLocal(now, -720))
       .order("closes_at")
       .returns<Poll[]>(),
-    supabase.from("news_items").select("id", { count: "exact", head: true }).eq("visible", true),
-    supabase.from("news_items").select("id", { count: "exact", head: true }),
+    supabase.from("category_news").select("id", { count: "exact", head: true }).eq("visible", true),
+    supabase.from("category_news").select("id", { count: "exact", head: true }),
   ]);
   const onHome = (polls ?? []).filter((p) => pollOnHome(p, now));
   const fixedOn = FIXED_NEWS_KEYS.filter((k) => newsEnabled(get(k))).length;

@@ -14,7 +14,7 @@ export default async function TextoBienvenidaPage({
   const { supabase, profile } = await requireOrganizer();
   const { error, ok } = await searchParams;
   const { data } = await supabase
-    .from("site_texts")
+    .from("category_texts")
     .select("key, body")
     .in("key", [WELCOME_KEY, HOME_MODE_KEY])
     .returns<{ key: string; body: string }[]>();
