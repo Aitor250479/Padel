@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import ConfirmButton from "@/components/ConfirmButton";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
-import { displayName, requireOrganizer, type Pair, type Profile } from "@/lib/session";
+import { canNameOrganizers, displayName, requireOrganizer, type Pair, type Profile } from "@/lib/session";
 import {
   assignPlayer,
   deletePlayer,
@@ -27,13 +27,14 @@ export default async function PlayerPage({
   const { id } = await params;
   const { error, ok } = await searchParams;
 
-  const [{ data: player }, { data: pairs }] = await Promise.all([
+  const [{ data: player }, { data: pairs }, nameOrganizers] = await Promise.all([
     supabase
       .from("profiles")
       .select("*")
       .eq("id", id)
       .maybeSingle<Profile>(),
     supabase.from("pairs").select("id, name").is("league_id", null).order("name").returns<Pair[]>(),
+    canNameOrganizers(supabase, profile),
   ]);
   if (!player || player.deleted_at) notFound();
 
@@ -165,7 +166,7 @@ export default async function PlayerPage({
             </form>
           </section>
 
-          {!isMe && !inactive && (
+          {!isMe && !inactive && nameOrganizers && (
             <section className={card}>
               <h2 className="mb-1 font-semibold">Organizador</h2>
               <p className="mb-3 text-sm opacity-70">
