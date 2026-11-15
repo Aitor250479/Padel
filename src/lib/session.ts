@@ -11,6 +11,10 @@ export type Profile = {
   active?: boolean;
   /** Eliminado: ya no tiene cuenta, pero se conserva su historia (migración 016). */
   deleted_at?: string | null;
+  /** Superadmin: crea ligas y categorías (migración 023). */
+  is_superadmin?: boolean;
+  /** Categoría del jugador; vacía = pendiente de categoría (migración 023). */
+  category_id?: string | null;
 };
 
 export type Pair = {
@@ -50,6 +54,15 @@ export async function requireOrganizer() {
   const ctx = await requireProfile();
   if (!ctx.profile.is_organizer) redirect("/");
   return ctx;
+}
+
+/** ¿Puede nombrar organizadores? Solo el superadmin y los organizadores de liga (migración 024). */
+export async function canNameOrganizers(supabase: Awaited<ReturnType<typeof createClient>>, profile: Profile) {
+  if (profile.is_superadmin) return true;
+  const { data, error } = await supabase.rpc("is_any_league_admin");
+  // Antes de la migración 024 la función no existe: como hasta ahora, cualquier organizador.
+  if (error) return profile.is_organizer;
+  return data === true;
 }
 
 export function displayName(p: Pick<Profile, "full_name" | "email">) {
