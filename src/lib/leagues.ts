@@ -15,6 +15,25 @@ export const LEAGUE_COLUMNS = "id, name, started_at, ended_at, kind";
 
 export const isIndividual = (league: League | null | undefined) => league?.kind === "individual";
 
+/** Descanso: la temporada abierta todavía no ha empezado (migración 026). */
+export const isResting = (league: League | null | undefined, now = new Date()) =>
+  !!league && !league.ended_at && new Date(league.started_at).getTime() > now.getTime();
+
+/** "lunes, 12 de enero" (hora de Madrid). */
+export function formatSeasonStart(iso: string) {
+  return new Date(iso).toLocaleDateString("es-ES", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "Europe/Madrid",
+  });
+}
+
+/** Fecha (AAAA-MM-DD, hora de Madrid) para un campo de fecha. */
+export function dateInputValue(iso: string) {
+  return new Date(iso).toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" });
+}
+
 /** Temporada en curso de la categoría que se está viendo (migración 025). */
 export async function currentLeague(supabase: SupabaseClient) {
   const { data } = await supabase

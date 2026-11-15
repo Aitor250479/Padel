@@ -9,10 +9,11 @@ import Notice from "@/components/Notice";
 import StandingsTable from "@/components/StandingsTable";
 import StandingsTabs from "@/components/StandingsTabs";
 import { leaguePlayerStandings, leagueStandings } from "@/lib/league-data";
-import { LEAGUE_COLUMNS, isIndividual, type League } from "@/lib/leagues";
+import { LEAGUE_COLUMNS, dateInputValue, isIndividual, isResting, type League } from "@/lib/leagues";
+import RestNotice from "@/components/RestNotice";
 import { loadPairDirectory } from "@/lib/matches";
 import { requireProfile } from "@/lib/session";
-import { renameLeague, startNewLeague } from "./actions";
+import { renameLeague, startNewLeague, updateNextSeason } from "./actions";
 
 const input = "min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-black";
 
@@ -33,8 +34,11 @@ export default async function ClasificacionPage({
     // Temporadas de la categoría que se está viendo.
     supabase.from("category_seasons").select(LEAGUE_COLUMNS).order("started_at", { ascending: false }).returns<League[]>(),
   ]);
-  const current = (leagues ?? []).find((l) => !l.ended_at) ?? null;
+  const open = (leagues ?? []).find((l) => !l.ended_at) ?? null;
   const previous = (leagues ?? []).filter((l) => l.ended_at);
+  // En el descanso se ve la clasificación final de la temporada que acaba de terminar.
+  const resting = isResting(open);
+  const current = resting ? (previous[0] ?? null) : open;
   // En una liga individual solo hay clasificación individual.
   const individualLeague = isIndividual(current);
   const individual = individualLeague || vista === "jugadores";
@@ -42,10 +46,12 @@ export default async function ClasificacionPage({
     supabase,
     current,
     pairs.map((p) => p.id),
+    { onlyPlayed: resting },
   );
+  const today = dateInputValue(new Date().toISOString());
   const [players, levelData] = individual
     ? await Promise.all([
-        leaguePlayerStandings(supabase, matches, { includeCurrentPlayers: true, individual: individualLeague }),
+        leaguePlayerStandings(supabase, matches, { includeCurrentPlayers: !resting, individual: individualLeague }),
         loadLevels(supabase),
       ])
     : [null, null];
@@ -61,11 +67,15 @@ export default async function ClasificacionPage({
         <h1 className="text-2xl font-bold">Clasificación</h1>
         {current && (
           <p className="mb-4 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-            🏆 {current.name} · {individualLeague ? "liga individual" : "liga por parejas"} · desde el{" "}
-            {formatDate(current.started_at)}
+            🏆 {resting ? "Clasificación final de " : ""}
+            {current.name} · {individualLeague ? "liga individual" : "liga por parejas"} ·{" "}
+            {resting && current.ended_at
+              ? `del ${formatDate(current.started_at)} al ${formatDate(current.ended_at)}`
+              : `desde el ${formatDate(current.started_at)}`}
           </p>
         )}
         <Notice ok={ok} error={error} />
+        <RestNotice league={open} />
         {!individualLeague && <StandingsTabs base="/clasificacion" players={individual} />}
         {players ? (
           <>
@@ -168,7 +178,38 @@ export default async function ClasificacionPage({
           </section>
         )}
 
-        {profile.is_organizer && current && (
+        {profile.is_organizer && open && resting && (
+          <section className="mt-8 rounded-xl border border-amber-300 p-4 dark:border-amber-800">
+            <h2 className="mb-1 font-semibold">Organizador · Temporada que viene</h2>
+            <p className="mb-3 text-sm opacity-70">
+              Hasta que empiece puedes cambiarle el nombre, el tipo y la fecha de inicio. Empieza sola ese día.
+              Durante el descanso, el organizador de la liga puede cambiar jugadores de categoría.
+            </p>
+            <form action={updateNextSeason} className="flex flex-col gap-2">
+              <input type="hidden" name="id" value={open.id} />
+              <input name="name" required maxLength={60} defaultValue={open.name} className={input} />
+              <div className="flex flex-wrap gap-2 text-sm">
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="kind" value="parejas" defaultChecked={open.kind !== "individual"} />
+                  Por parejas
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="kind" value="individual" defaultChecked={open.kind === "individual"} />
+                  Individual
+                </label>
+              </div>
+              <label className="flex flex-wrap items-center gap-2 text-sm">
+                Empieza el
+                <input type="date" name="start" required min={today} defaultValue={dateInputValue(open.started_at)} className={input} />
+              </label>
+              <SubmitButton className="self-start rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">
+                Guardar
+              </SubmitButton>
+            </form>
+          </section>
+        )}
+
+        {profile.is_organizer && current && !resting && (
           <section className="mt-8 flex flex-col gap-4">
             <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
               <h2 className="mb-2 font-semibold">Organizador · Nombre de la liga en curso</h2>
@@ -183,17 +224,23 @@ export default async function ClasificacionPage({
 
             <div className="rounded-xl border border-red-200 p-4 dark:border-red-900">
               <h2 className="mb-1 font-semibold text-red-700 dark:text-red-400">
-                Organizador · Reiniciar la liga
+                Organizador · Terminar la temporada
               </h2>
               <p className="mb-3 text-sm opacity-70">
                 Termina «{current.name}» (su clasificación y resultados quedan en Ligas anteriores) y
-                empieza una liga nueva desde cero, por parejas o individual. Las parejas, los jugadores
-                y la disponibilidad se mantienen.
+                prepara la temporada siguiente desde cero, por parejas o individual. Hasta su fecha de inicio
+                hay descanso: no hay partidos y el organizador de la liga puede cambiar jugadores de
+                categoría. Las parejas, los jugadores y la disponibilidad se mantienen.
               </p>
               <form action={startNewLeague} className="flex flex-col gap-2">
-                <input name="name" required maxLength={60} placeholder="Nombre de la nueva liga" className={input} />
+                <input name="name" required maxLength={60} placeholder="Nombre de la nueva temporada" className={input} />
+                <label className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="font-semibold">Empieza el</span>
+                  <input type="date" name="start" required min={today} defaultValue={today} className={input} />
+                  <span className="opacity-70">(hoy = sin descanso, empieza ya)</span>
+                </label>
                 <fieldset className="flex flex-col gap-1 text-sm">
-                  <legend className="mb-1 font-semibold">Tipo de liga</legend>
+                  <legend className="mb-1 font-semibold">Tipo de temporada</legend>
                   <label className="flex items-start gap-2">
                     <input type="radio" name="kind" value="parejas" defaultChecked className="mt-1" />
                     <span>
@@ -211,12 +258,12 @@ export default async function ClasificacionPage({
                   </label>
                 </fieldset>
                 <div className="flex flex-wrap gap-2">
-                  <input name="confirm" required autoComplete="off" placeholder="Escribe REINICIAR" className={input} />
+                  <input name="confirm" required autoComplete="off" placeholder="Escribe TERMINAR" className={input} />
                   <ConfirmButton
-                    message={`Se cerrará «${current.name}» y empezará la nueva liga desde cero. ¿Seguro?`}
+                    message={`Se cerrará «${current.name}» y su clasificación quedará como final. ¿Seguro?`}
                     className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white"
                   >
-                    Empezar liga nueva
+                    Terminar temporada
                   </ConfirmButton>
                 </div>
               </form>

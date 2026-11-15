@@ -4,6 +4,7 @@ import Image from "next/image";
 import Carousel from "@/components/Carousel";
 import { BreakingNews, MatchupPoster, ResultPoster } from "@/components/NewsPosters";
 import { currentLeague, isIndividual, onlyLeague } from "@/lib/leagues";
+import RestNotice from "@/components/RestNotice";
 import {
   MATCH_COLUMNS,
   PROPOSED_COLUMNS,
@@ -189,6 +190,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ o
     <>
       <Header profile={profile} />
       <main className="mx-auto max-w-3xl px-4 py-6">
+        <RestNotice league={league}>Mientras tanto, mira la clasificación final o apúntate a un amistoso.</RestNotice>
         {inactive && (
           <Image
             src="/jugadordesactivado.png"

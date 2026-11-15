@@ -17,7 +17,8 @@ import {
   type Match,
   type ProposedResult,
 } from "@/lib/matches";
-import { currentLeague, isIndividual, onlyLeague } from "@/lib/leagues";
+import { currentLeague, isIndividual, isResting, onlyLeague } from "@/lib/leagues";
+import RestNotice from "@/components/RestNotice";
 import { displayName, requireProfile } from "@/lib/session";
 import { addDays, currentWeek, formatWeek, formatWeekLong, nowInSpain, parseWeek, weekLabel, weeksFromNow } from "@/lib/weeks";
 import { confirmResultAsOrganizer, createMatch, generatePairings } from "./actions";
@@ -120,6 +121,7 @@ export default async function PartidosPage({
         </div>
 
         <Notice ok={params.ok} error={params.error} />
+        <RestNotice league={league}>Hasta entonces no hay partidos.</RestNotice>
 
         {(matches ?? []).length === 0 ? (
           <p className="mb-6 opacity-70">Todavía no hay partidos esta semana.</p>
@@ -287,7 +289,7 @@ export default async function PartidosPage({
           </section>
         )}
 
-        {profile.is_organizer && (
+        {profile.is_organizer && !isResting(league) && (
           <section className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
             <h2 className="mb-2 font-semibold">Organizador · Emparejamientos</h2>
             <form action={generatePairings} className="mb-2">
