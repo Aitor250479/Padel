@@ -195,15 +195,17 @@ export default async function PlayerPage({
                 {ownCategory ? (
                   <>
                     Juega en <b>{ownCategory.name}</b>.{" "}
-                    {playing
-                      ? "Solo se puede cambiar de categoría cuando la suya está en el descanso entre temporadas."
-                      : "Su categoría está en el descanso: puedes cambiarle de categoría. Saldrá de su pareja y dejará de ser organizador."}
+                    {inactive
+                      ? "Está desactivado: puedes cambiarle de categoría en cualquier momento."
+                      : playing
+                        ? "Solo se puede cambiar de categoría cuando la suya está en el descanso entre temporadas (o si está desactivado)."
+                        : "Su categoría está en el descanso: puedes cambiarle de categoría. Saldrá de su pareja y dejará de ser organizador."}
                   </>
                 ) : (
                   "Pendiente de categoría: elige en cuál va a jugar."
                 )}
               </p>
-              {!playing && targets.length > 0 && (
+              {(!playing || inactive) && targets.length > 0 && (
                 <form action={setPlayerCategory} className="flex gap-2">
                   <input type="hidden" name="player_id" value={player.id} />
                   <select name="category_id" required defaultValue="" className={`${input} min-w-0 flex-1`}>
