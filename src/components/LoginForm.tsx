@@ -21,7 +21,18 @@ function translate(message: string) {
 
 const input = "rounded-lg border border-gray-300 px-3 py-2 text-black";
 
-export function LoginForm({ initialMode = "entrar", banner }: { initialMode?: Mode; banner?: React.ReactNode }) {
+export function LoginForm({
+  initialMode = "entrar",
+  banner,
+  invite,
+  title: heading = "Torneo Pádel Loyola",
+}: {
+  initialMode?: Mode;
+  banner?: React.ReactNode;
+  /** Código de invitación: mete al jugador nuevo en su categoría o liga. */
+  invite?: string;
+  title?: string;
+}) {
   const router = useRouter();
   const params = useSearchParams();
   const [mode, setMode] = useState<Mode>(initialMode);
@@ -62,7 +73,7 @@ export function LoginForm({ initialMode = "entrar", banner }: { initialMode?: Mo
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${origin}/auth/callback` },
+          options: { emailRedirectTo: `${origin}/auth/callback`, data: invite ? { invitacion: invite } : undefined },
         });
         if (error) return setError(translate(error.message));
         if (data.session) {
@@ -107,7 +118,7 @@ export function LoginForm({ initialMode = "entrar", banner }: { initialMode?: Mo
           priority
         />
       )}
-      <h1 className="mb-6 text-center text-3xl font-bold">Torneo Pádel Loyola</h1>
+      <h1 className="mb-6 text-center text-3xl font-bold">{heading}</h1>
 
       <h2 className="mb-1 text-lg font-semibold">{title}</h2>
       {mode === "registro" && (

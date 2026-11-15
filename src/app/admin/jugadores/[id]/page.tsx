@@ -51,9 +51,12 @@ export default async function PlayerPage({
       ])
     : [{ data: [] as Cat[] }, { data: false }];
   const ownCategory = (categories ?? []).find((c) => c.id === player.category_id);
+  // Se cambia dentro de su liga; un pendiente, a una de la liga en la que espera.
+  const league = ownCategory?.competition_id ?? player.pending_competition_id;
   const targets = (categories ?? []).filter(
-    (c) => c.id !== player.category_id && (!ownCategory || c.competition_id === ownCategory.competition_id),
+    (c) => c.id !== player.category_id && (!league || c.competition_id === league),
   );
+  const pendingCategory = !player.category_id;
 
   const pair = (pairs ?? []).find((p) => p.id === player.pair_id);
   const back = `/admin/jugadores/${player.id}`;
@@ -85,6 +88,8 @@ export default async function PlayerPage({
             <>
               Pareja: <b>{pair.name}</b>
             </>
+          ) : pendingCategory ? (
+            "⏳ Pendiente de categoría"
           ) : (
             "Sin pareja asignada"
           )}
@@ -144,7 +149,7 @@ export default async function PlayerPage({
             </form>
           </section>
 
-          {!inactive && (
+          {!inactive && !pendingCategory && (
             <section className={card}>
               <h2 className="mb-3 font-semibold">Pareja</h2>
               <form action={assignPlayer} className="flex flex-wrap gap-2">

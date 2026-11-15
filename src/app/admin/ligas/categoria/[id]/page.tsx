@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
+import InviteBox from "@/components/InviteBox";
 import Notice from "@/components/Notice";
 import SubmitButton from "@/components/SubmitButton";
 import { displayName, requireLeagueAdmin, type Profile } from "@/lib/session";
@@ -23,7 +24,7 @@ export default async function CategoriaPage({
 
   const { data: category } = await supabase
     .from("categories")
-    .select("id, name, competition_id")
+    .select("id, name, competition_id, invite_code")
     .eq("id", id)
     .maybeSingle<Category>();
   if (!category) notFound();
@@ -106,8 +107,8 @@ export default async function CategoriaPage({
             </ul>
           ) : (
             <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm opacity-70 dark:border-gray-700">
-              Todavía no hay jugadores. Podrán entrar con las invitaciones de la categoría o pasar desde
-              otra categoría en el descanso entre temporadas (lo preparamos en los próximos pasos).
+              Todavía no hay jugadores. Pueden entrar con la invitación de la categoría (abajo), pasar
+              desde otra categoría en el descanso entre temporadas o darse de alta a mano en Parejas.
             </p>
           )}
           {inactive.length > 0 && (
@@ -116,6 +117,19 @@ export default async function CategoriaPage({
             </p>
           )}
         </section>
+
+        {category.invite_code && (
+          <div className="mb-6">
+            <InviteBox
+              title="📨 Invitar a esta categoría"
+              help={`Quien se apunte con este enlace entra directamente en ${category.name}.`}
+              code={category.invite_code}
+              competition={competition?.name ?? "la liga"}
+              targetId={category.id}
+              back={`/admin/ligas/categoria/${category.id}`}
+            />
+          </div>
+        )}
 
         <section>
           <h2 className="mb-2 text-lg font-semibold">Temporadas</h2>

@@ -16,7 +16,8 @@ import {
 } from "@/lib/matches";
 import { myTodos, type Todo } from "@/lib/todo";
 import TodoList from "@/components/TodoList";
-import { requireProfile, type Profile } from "@/lib/session";
+import { isPendingCategory, requireProfile, type Profile } from "@/lib/session";
+import PendingHome from "@/components/PendingHome";
 import { HOME_MODE_KEY, WELCOME_KEY } from "@/lib/welcome";
 import { POLL_COLUMNS, addHoursLocal, pollOnHome, pollTodo, type Poll } from "@/lib/polls";
 import {
@@ -55,6 +56,10 @@ import { addDays, currentWeek, defaultWeek, formatWeekLong, nowInSpain } from "@
 export default async function Home({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
   const { supabase, profile } = await requireProfile();
   const notice = await searchParams;
+  if (isPendingCategory(profile)) {
+    const { data, error } = await supabase.from("player_levels").select("profile_id").eq("profile_id", profile.id).maybeSingle();
+    return <PendingHome profile={profile} hasLevel={!!data || !!error} />;
+  }
   // Desactivado: entra a consultar, con su imagen arriba y sin tareas pendientes.
   const inactive = profile.active === false;
   const { data: texts } = await supabase

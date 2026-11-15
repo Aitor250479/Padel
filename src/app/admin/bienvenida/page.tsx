@@ -3,8 +3,7 @@ import SubmitButton from "@/components/SubmitButton";
 import Header from "@/components/Header";
 import Notice from "@/components/Notice";
 import { requireOrganizer } from "@/lib/session";
-import ShareImageButton from "@/components/ShareImageButton";
-import { siteUrl } from "@/lib/site-url";
+import InviteBox from "@/components/InviteBox";
 import { POLL_COLUMNS, addHoursLocal, pollOnHome, pollOpen, type Poll } from "@/lib/polls";
 import { FIXED_NEWS_KEYS, newsEnabled } from "@/lib/news";
 import { HOME_MODE_KEY, WELCOME_KEY, type HomeMode } from "@/lib/welcome";
@@ -40,7 +39,12 @@ export default async function BienvenidaPage({
   ]);
   const onHome = (polls ?? []).filter((p) => pollOnHome(p, now));
   const fixedOn = FIXED_NEWS_KEYS.filter((k) => newsEnabled(get(k))).length;
-  const invite = `${await siteUrl()}/unete`;
+  // Invitación de la categoría que se gestiona.
+  const active = profile.active_category;
+  const { data: code } = active
+    ? await supabase.from("categories").select("invite_code").eq("id", active.id).maybeSingle<{ invite_code: string }>()
+    : { data: null };
+  const category = active && code ? { ...active, invite_code: code.invite_code } : null;
 
   const option =
     "flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 p-3 has-[:checked]:border-lime-400 has-[:checked]:bg-lime-50 dark:border-gray-800 dark:has-[:checked]:bg-neutral-900";
@@ -134,19 +138,18 @@ export default async function BienvenidaPage({
           </Link>
         </section>
 
-        <section className="mt-8 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
-          <h2 className="mb-1 font-semibold">📨 Invitar a nuevos jugadores</h2>
-          <p className="mb-3 text-sm opacity-70">
-            Envía por WhatsApp la invitación a quien quieras. Lleva un enlace que abre directamente la
-            pantalla de crear cuenta: {invite}
-          </p>
-          <ShareImageButton
-            text={`🎾 *¡Únete al Torneo Pádel Loyola!* 🎾\nBuscamos nuevos jugadores. Crea tu usuario en un minuto y, al entrar, marca cuándo puedes jugar: el sorteo se encarga del resto 😎\n👉 ${invite}`}
-            imageUrl="/unete/cartel"
-            fileName="invitacion.png"
-            label="Invitar por WhatsApp"
-          />
-        </section>
+        {category && (
+          <div className="mt-8">
+            <InviteBox
+              title="📨 Invitar a nuevos jugadores"
+              help={`Envía por WhatsApp la invitación a quien quieras. Abre directamente la pantalla de crear cuenta y quien se apunte entra en ${category.name}.`}
+              code={category.invite_code}
+              competition={category.competition_name}
+              targetId={category.id}
+              back="/admin/bienvenida"
+            />
+          </div>
+        )}
       </main>
     </>
   );
