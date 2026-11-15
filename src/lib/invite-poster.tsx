@@ -7,7 +7,7 @@ const RED = "#c8102e";
 const LIME = "#a3e635";
 
 /** Cartel de invitación (PNG): la imagen de "¡Únete a la liga!" y el enlace. */
-export async function renderInvitePoster(host: string) {
+export async function renderInvitePoster(host: string, code?: string, footer = "Torneo Pádel Loyola") {
   const [black, extra, banner] = await Promise.all([
     readFile(join(process.cwd(), "src/assets/fonts/nunito-latin-900-normal.woff")),
     readFile(join(process.cwd(), "src/assets/fonts/nunito-latin-800-normal.woff")),
@@ -51,12 +51,12 @@ export async function renderInvitePoster(host: string) {
               border: "6px solid #111",
               borderRadius: 999,
               padding: "16px 20px",
-              fontSize: 44,
+              fontSize: code ? 36 : 44,
               fontWeight: 900,
               color: "#111",
             }}
           >
-            {`${host}/unete`}
+            {`${host}/unete${code ? `/${code}` : ""}`}
           </div>
           <div
             style={{
@@ -68,7 +68,7 @@ export async function renderInvitePoster(host: string) {
               color: "#fff",
             }}
           >
-            Torneo Pádel Loyola · ¡Te esperamos en la pista!
+            {`${footer} · ¡Te esperamos en la pista!`}
           </div>
         </div>
       </div>

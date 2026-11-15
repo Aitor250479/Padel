@@ -15,6 +15,8 @@ export type Profile = {
   is_superadmin?: boolean;
   /** Categoría del jugador; vacía = pendiente de categoría (migración 023). */
   category_id?: string | null;
+  /** Pendiente de categoría: liga en la que espera (migración 028). */
+  pending_competition_id?: string | null;
   /** Ligas que organiza (no es columna: se rellena en requireProfile, migración 024). */
   league_admin_of?: string[];
   /** Categoría que está viendo: la suya, o la que gestiona un organizador de liga (migración 025). */
@@ -80,4 +82,9 @@ export async function requireLeagueAdmin() {
 
 export function displayName(p: Pick<Profile, "full_name" | "email">) {
   return p.full_name?.trim() || p.email.split("@")[0];
+}
+
+/** Dado de alta con la invitación genérica de una liga: espera a que le den categoría. */
+export function isPendingCategory(profile: Profile) {
+  return !profile.category_id && !isLeagueAdmin(profile);
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ConfirmButton from "@/components/ConfirmButton";
 import Header from "@/components/Header";
+import InviteBox from "@/components/InviteBox";
 import Notice from "@/components/Notice";
 import SubmitButton from "@/components/SubmitButton";
 import { displayName, requireLeagueAdmin, type Profile } from "@/lib/session";
@@ -19,7 +20,7 @@ export default async function LigasPage({
 
   const [{ data: competitions }, { data: categories }, { data: admins }, { data: players }, { data: seasons }] =
     await Promise.all([
-      supabase.from("competitions").select("id, name").order("created_at").returns<Competition[]>(),
+      supabase.from("competitions").select("id, name, invite_code").order("created_at").returns<Competition[]>(),
       supabase.from("categories").select("id, name, competition_id").order("created_at").returns<Category[]>(),
       supabase
         .from("competition_admins")
@@ -27,7 +28,7 @@ export default async function LigasPage({
         .returns<{ competition_id: string; profile_id: string }[]>(),
       supabase
         .from("profiles")
-        .select("id, email, full_name, is_organizer, active, deleted_at, category_id")
+        .select("id, email, full_name, is_organizer, active, deleted_at, category_id, pending_competition_id")
         .is("deleted_at", null)
         .order("full_name")
         .returns<Profile[]>(),
@@ -37,6 +38,16 @@ export default async function LigasPage({
   const byId = new Map((players ?? []).map((p) => [p.id, p]));
   const activePlayers = (players ?? []).filter((p) => p.active !== false);
   const pending = activePlayers.filter((p) => !p.category_id);
+  // Pendientes sin liga (altas anteriores a las invitaciones): los ve cualquier organizador de liga.
+  const pendingNoLeague = pending.filter((p) => !p.pending_competition_id);
+  const pendingLink = (p: Profile) => (
+    <li key={p.id}>
+      <Link href={`/admin/jugadores/${p.id}`} className={rowLink}>
+        <span className="truncate">⏳ {displayName(p)}</span>
+        <span aria-hidden>›</span>
+      </Link>
+    </li>
+  );
 
   return (
     <>
@@ -51,11 +62,11 @@ export default async function LigasPage({
         </p>
         <Notice ok={ok} error={error} />
 
-        {pending.length > 0 && (
-          <p className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
-            ⏳ <b>{pending.length} pendiente{pending.length === 1 ? "" : "s"} de categoría:</b>{" "}
-            {pending.map((p) => displayName(p)).join(", ")}
-          </p>
+        {pendingNoLeague.length > 0 && (
+          <section className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
+            <p className="mb-2 font-semibold">⏳ Pendientes de categoría ({pendingNoLeague.length})</p>
+            <ul className="grid gap-2 sm:grid-cols-2">{pendingNoLeague.map(pendingLink)}</ul>
+          </section>
         )}
 
         <div className="flex flex-col gap-6">
@@ -66,6 +77,7 @@ export default async function LigasPage({
               .map((a) => byId.get(a.profile_id))
               .filter((p): p is Profile => !!p);
             const candidates = activePlayers.filter((p) => !compAdmins.some((a) => a.id === p.id));
+            const compPending = pending.filter((p) => p.pending_competition_id === comp.id);
             return (
               <section key={comp.id} className={`${card} border-sky-300 dark:border-sky-800`}>
                 <p className="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">Liga</p>
@@ -77,6 +89,15 @@ export default async function LigasPage({
                   </form>
                 ) : (
                   <h2 className="mb-3 text-xl font-bold">{comp.name}</h2>
+                )}
+
+                {compPending.length > 0 && (
+                  <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
+                    <p className="mb-2 font-semibold">
+                      ⏳ Pendientes de categoría ({compPending.length}): entra en cada uno para asignarle una.
+                    </p>
+                    <ul className="grid gap-2 sm:grid-cols-2">{compPending.map(pendingLink)}</ul>
+                  </div>
                 )}
 
                 <h3 className="mb-2 font-semibold">Categorías ({cats.length})</h3>
@@ -118,6 +139,19 @@ export default async function LigasPage({
                     <SubmitButton pendingText="Creando…" className={button}>Crear categoría</SubmitButton>
                   </form>
                 </details>
+
+                {comp.invite_code && (
+                  <div className="mb-4">
+                    <InviteBox
+                      title="📨 Invitación genérica de la liga"
+                      help="Quien se apunte con este enlace queda pendiente de categoría y aparece arriba para que le asignes una. Para invitar a una categoría concreta, usa la invitación de esa categoría (entra en ella)."
+                      code={comp.invite_code}
+                      competition={comp.name}
+                      targetId={comp.id}
+                      back="/admin/ligas"
+                    />
+                  </div>
+                )}
 
                 <h3 className="mb-1 font-semibold">Organizadores de liga</h3>
                 <p className="mb-2 text-sm opacity-70">

@@ -1,15 +1,21 @@
 import Image from "next/image";
 import Link from "next/link";
 import NavPills from "@/components/NavPills";
-import { displayName, isLeagueAdmin, type Profile } from "@/lib/session";
+import { displayName, isLeagueAdmin, isPendingCategory, type Profile } from "@/lib/session";
 
 export default function Header({ profile }: { profile: Profile }) {
+  // Pendiente de categoría: solo su perfil hasta que le asignen una.
+  const pending = isPendingCategory(profile);
   const items = [
     // Un jugador desactivado solo consulta: sin disponibilidad.
-    ...(profile.active === false ? [] : [{ href: "/disponibilidad", label: "Disponibilidad", icon: "📅" }]),
-    { href: "/partidos", label: "Partidos", icon: "🎾" },
-    { href: "/amistosos", label: "Amistosos", icon: "🤝" },
-    { href: "/clasificacion", label: "Clasificación", icon: "🏆" },
+    ...(profile.active === false || pending ? [] : [{ href: "/disponibilidad", label: "Disponibilidad", icon: "📅" }]),
+    ...(pending
+      ? []
+      : [
+          { href: "/partidos", label: "Partidos", icon: "🎾" },
+          { href: "/amistosos", label: "Amistosos", icon: "🤝" },
+          { href: "/clasificacion", label: "Clasificación", icon: "🏆" },
+        ]),
     { href: "/perfil", label: "Mi perfil", icon: "👤" },
     ...(profile.is_organizer
       ? [
@@ -38,7 +44,7 @@ export default function Header({ profile }: { profile: Profile }) {
             />
             <span className="min-w-0">
               <span className="block text-lg font-extrabold leading-tight tracking-tight">
-                Torneo Pádel Loyola
+                {profile.active_category?.competition_name ?? "Torneo Pádel Loyola"}
               </span>
               <span className="block text-xs text-lime-300">
                 Hola, {displayName(profile)}
